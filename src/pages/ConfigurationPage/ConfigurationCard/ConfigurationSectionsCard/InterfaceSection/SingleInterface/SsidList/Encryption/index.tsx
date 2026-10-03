@@ -9,6 +9,7 @@ import {
   NO_MULTI_PROTOS,
 } from '../../../interfacesConstants';
 import EncryptionForm from './Encryption';
+import { encryptionForProtocol } from 'helpers/authProtocol';
 import useFastField from 'hooks/useFastField';
 
 const Encryption = ({
@@ -33,16 +34,14 @@ const Encryption = ({
 
   const onProtoChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const newEncryption: { proto: string; key?: string; ieee80211w?: string } = {
-        proto: e.target.value,
-      };
+      const newEncryption = encryptionForProtocol(
+        e.target.value, encryptionValue, ENCRYPTION_PROTOS_REQUIRE_KEY, ENCRYPTION_PROTOS_REQUIRE_IEEE,
+      );
       if (e.target.value === 'none') {
         onEncryptionChange({ proto: 'none' });
         onRadiusChange(undefined);
       } else {
         if (NO_MULTI_PROTOS.includes(e.target.value)) onMultiPskChange(undefined);
-        if (ENCRYPTION_PROTOS_REQUIRE_KEY.includes(e.target.value)) newEncryption.key = 'YOUR_SECRET';
-        if (ENCRYPTION_PROTOS_REQUIRE_IEEE.includes(e.target.value)) newEncryption.ieee80211w = 'required';
         onEncryptionChange(newEncryption);
         if (ENCRYPTION_PROTOS_REQUIRE_RADIUS.includes(e.target.value)) {
           onRadiusChange(INTERFACE_SSID_RADIUS_SCHEMA(t, true).cast());
@@ -51,7 +50,7 @@ const Encryption = ({
         }
       }
     },
-    [isPasspoint],
+    [encryptionValue, onEncryptionChange, onRadiusChange, onMultiPskChange, t],
   );
 
   const { isKeyNeeded, needIeee, isUsingRadius, canUseRadius } = useMemo(
