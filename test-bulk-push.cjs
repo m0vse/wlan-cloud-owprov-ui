@@ -14,6 +14,20 @@ vm.runInContext(source.replace(/export /g, ''), context);
   };
   assert.deepEqual(Array.from(await context.collectTargets('entity', 'e', async (k, id) => nodes[`${k}:${id}`])), ['a', 'b', 'c', 'd']);
   await assert.rejects(context.collectTargets('venue', 'bad', async () => undefined));
+  const resolved = await context.resolveSerials(['inventory-uuid-a', 'inventory-uuid-b'], async () => [
+    { id: 'inventory-uuid-a', serialNumber: '000456994617' },
+    { id: 'inventory-uuid-b', serialNumber: 'fc1165bea5be' },
+    { id: 'outside-scope', serialNumber: 'DO-NOT-PUSH' },
+  ]);
+  assert.deepEqual(Array.from(resolved), ['000456994617', 'fc1165bea5be']);
+  await assert.rejects(context.resolveSerials(['missing'], async () => []));
+  await assert.rejects(context.resolveSerials(['duplicate'], async () => [{ id: 'duplicate', serialNumber: 'a' }, { id: 'duplicate', serialNumber: 'b' }]));
+  const batches = [];
+  await context.resolveSerials(Array.from({ length: 101 }, (_, n) => `id-${n}`), async (ids) => {
+    batches.push(ids.length);
+    return ids.map((id) => ({ id, serialNumber: id.replace('id-', 'serial-') }));
+  });
+  assert.deepEqual(batches, [100, 1]);
   let calls = [];
   const results = await context.pushTargets(['a', 'b', 'c', 'd'], async (s) => {
     calls.push(s);

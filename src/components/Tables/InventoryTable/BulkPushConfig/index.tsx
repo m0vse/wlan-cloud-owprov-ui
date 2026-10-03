@@ -4,7 +4,7 @@ import { PaperPlaneTilt } from '@phosphor-icons/react';
 import ModalHeader from 'components/Modals/ModalHeader';
 import CloseButton from 'components/Buttons/CloseButton';
 import { axiosProv } from 'utils/axiosInstances';
-import { collectTargets, pushTargets } from './helpers';
+import { collectTargets, resolveSerials, pushTargets } from './helpers';
 
 type Result = { serial: string; status: string; detail: string };
 const BulkPushConfig = ({ kind, id }: { kind: 'entity' | 'venue'; id: string }) => {
@@ -21,8 +21,10 @@ const BulkPushConfig = ({ kind, id }: { kind: 'entity' | 'venue'; id: string }) 
     let resolved: string[] = [];
     try {
       // Uses the operator's existing session; server permissions apply to every read/push.
-      resolved = await collectTargets(kind, id, async (type: string, uuid: string) =>
+      const inventoryIds = await collectTargets(kind, id, async (type: string, uuid: string) =>
         (await axiosProv.get(`${type}/${encodeURIComponent(uuid)}`)).data);
+      resolved = await resolveSerials(inventoryIds, async (ids: string[]) =>
+        (await axiosProv.get(`inventory?select=${ids.map(encodeURIComponent).join(',')}&limit=100&offset=0`)).data.taglist);
       setTargets(resolved);
     } catch {
       setError('Unable to load the complete scope. Nothing was pushed.');

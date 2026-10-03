@@ -17,6 +17,23 @@ export async function collectTargets(kind, id, read) {
   return [...devices].sort();
 }
 
+// Entity/venue devices contain inventory UUIDs, not gateway serial numbers.
+export async function resolveSerials(ids, readInventory) {
+  const serials = new Set();
+  for (let offset = 0; offset < ids.length; offset += 100) {
+    const batch = ids.slice(offset, offset + 100);
+    const tags = await readInventory(batch);
+    if (!Array.isArray(tags)) throw new Error('Unable to resolve inventory');
+    for (const id of batch) {
+      const matches = tags.filter((tag) => tag.id === id);
+      if (matches.length !== 1 || typeof matches[0].serialNumber !== 'string' || !matches[0].serialNumber)
+        throw new Error('Incomplete inventory mapping');
+      serials.add(matches[0].serialNumber);
+    }
+  }
+  return [...serials].sort();
+}
+
 export async function pushTargets(targets, push, progress) {
   const results = [];
   let denied = false;
