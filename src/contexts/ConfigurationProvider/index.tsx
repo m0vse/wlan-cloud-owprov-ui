@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo } from 'react';
 import { useToast } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
-import { collectInheritedResourceIds } from './inheritedResources';
+import { useFormikContext } from 'formik';
+import { collectInheritedResourceIds, inventoryResourceScope } from './inheritedResources';
 import { useGetConfiguration } from 'hooks/Network/Configurations';
 import { useGetResources } from 'hooks/Network/Resources';
 import { Resource } from 'models/Resource';
@@ -18,10 +19,12 @@ export const ConfigurationProvider = ({
   children,
   configurationId,
   entityId,
+  ownerScope,
 }: {
   children: React.ReactElement;
   configurationId?: string;
   entityId?: string;
+  ownerScope?: { venue?: string; entity?: string };
 }) => {
   const getConfig = useGetConfiguration({ id: configurationId, onSuccess: () => {} });
   const venueId = () => {
@@ -40,7 +43,7 @@ export const ConfigurationProvider = ({
   };
 
   const toast = useToast();
-  const scope = { venue: venueId(), entity: finalEntityId() };
+  const scope = ownerScope ?? { venue: venueId(), entity: finalEntityId() };
   const inheritedResources = useQuery(
     ['configuration-resource-ancestry', scope.venue ?? '', scope.entity ?? ''],
     () => collectInheritedResourceIds(scope, async (kind, id) => {
@@ -77,3 +80,11 @@ export const ConfigurationProvider = ({
 };
 
 export const useConfigurationContext = () => React.useContext(ConfigurationContext);
+
+// Inventory forms store the currently selected owner as ent:<id> or ven:<id>.
+// An explicit empty scope must not fall back to an override's previous owner.
+export const InventoryConfigurationProvider = ({ children }: { children: React.ReactElement }) => {
+  const { values } = useFormikContext<{ entity?: string }>();
+  const scope = inventoryResourceScope(values.entity);
+  return <ConfigurationProvider ownerScope={scope}>{children}</ConfigurationProvider>;
+};

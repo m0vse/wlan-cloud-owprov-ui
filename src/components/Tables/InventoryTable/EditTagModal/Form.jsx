@@ -8,6 +8,7 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { v4 as uuid } from 'uuid';
 import SpecialConfigurationManager from '../../../CustomFields/SpecialConfigurationManager';
+import { InventoryConfigurationProvider } from 'contexts/ConfigurationProvider';
 import ComputedConfigurationDisplay from './ComputedConfigurationDisplay';
 import ConfigurationOverrides from 'components/ConfigurationOverrides';
 import DeviceRulesField from 'components/CustomFields/DeviceRulesField';
@@ -355,12 +356,14 @@ const EditTagForm = ({
               </Form>
             </TabPanel>
             <TabPanel>
-              <SpecialConfigurationManager
-                configId={isDeleted ? '' : tag.deviceConfiguration}
-                editing={editing}
-                onChange={onConfigurationChange}
-                onDelete={() => setIsDeleted(true)}
-              />
+              <InventoryConfigurationProvider>
+                <SpecialConfigurationManager
+                  configId={isDeleted ? '' : tag.deviceConfiguration}
+                  editing={editing}
+                  onChange={onConfigurationChange}
+                  onDelete={() => setIsDeleted(true)}
+                />
+              </InventoryConfigurationProvider>
             </TabPanel>
             <TabPanel>
               <ComputedConfigurationDisplay serialNumber={tag.serialNumber} />

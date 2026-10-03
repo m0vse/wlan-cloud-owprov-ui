@@ -5,6 +5,7 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { v4 as uuid } from 'uuid';
 import SpecialConfigurationManager from '../../../CustomFields/SpecialConfigurationManager';
+import { InventoryConfigurationProvider } from 'contexts/ConfigurationProvider';
 import DeviceRulesField from 'components/CustomFields/DeviceRulesField';
 import SelectField from 'components/FormFields/SelectField';
 import SelectWithSearchField from 'components/FormFields/SelectWithSearchField';
@@ -207,7 +208,9 @@ const CreateTagForm = ({
           <StringField name="description" label={t('common.description')} />
           <StringField name="note" label={t('common.note')} />
         </SimpleGrid>
-        <SpecialConfigurationManager editing onChange={onConfigurationChange} />
+        <InventoryConfigurationProvider>
+          <SpecialConfigurationManager editing onChange={onConfigurationChange} />
+        </InventoryConfigurationProvider>
       </Form>
     </Formik>
   );

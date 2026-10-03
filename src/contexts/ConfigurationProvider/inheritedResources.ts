@@ -1,4 +1,12 @@
 type Scope = { entity?: string; venue?: string };
+
+export const inventoryResourceScope = (owner?: string): Scope => {
+  const [kind, id, extra] = (owner ?? '').split(':');
+  if (!id || extra !== undefined) return {};
+  if (kind === 'ven') return { venue: id };
+  if (kind === 'ent') return { entity: id };
+  return {};
+};
 type ResourceOwner = { id: string; variables?: string[]; entity?: string; parent?: string };
 type ReadOwner = (kind: 'entity' | 'venue', id: string) => Promise<ResourceOwner>;
 
