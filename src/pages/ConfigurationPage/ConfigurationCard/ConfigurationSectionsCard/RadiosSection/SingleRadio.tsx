@@ -21,9 +21,10 @@ type Props = {
   canEditBand?: boolean;
 };
 
-const SingleRadio = ({ isDisabled, namePrefix, remove, canEditBand }: Props) => {
+const SingleRadio = ({ isDisabled: isFormDisabled, namePrefix, remove, canEditBand }: Props) => {
   const { t } = useTranslation();
   const { value } = useFastField({ name: namePrefix });
+  const isDisabled = isFormDisabled || value?.enable === false;
 
   return (
     <>
@@ -52,7 +53,7 @@ const SingleRadio = ({ isDisabled, namePrefix, remove, canEditBand }: Props) => 
               label="Enabled"
               definitionKey="radio.enable"
               defaultValue={true}
-              isDisabled={isDisabled}
+              isDisabled={isFormDisabled}
             />
             <SelectField
               name={`${namePrefix}.band`}
