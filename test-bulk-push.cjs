@@ -14,6 +14,18 @@ vm.runInContext(source.replace(/export /g, ''), context);
   };
   assert.deepEqual(Array.from(await context.collectTargets('entity', 'e', async (k, id) => nodes[`${k}:${id}`])), ['a', 'b', 'c', 'd']);
   await assert.rejects(context.collectTargets('venue', 'bad', async () => undefined));
+  const inventory = Array.from({ length: 205 }, (_, n) => ({ id: `id-${n}` }));
+  const pages = [];
+  assert.equal((await context.collectInventoryIds(async () => 205, async (offset, limit) => {
+    pages.push(offset); return inventory.slice(offset, offset + limit);
+  })).length, 205);
+  assert.deepEqual(pages, [0, 100, 200]);
+  assert.equal((await context.collectInventoryIds(async () => 0, async () => { throw new Error('Unexpected page'); })).length, 0);
+  await assert.rejects(context.collectInventoryIds(async () => 1, async () => []));
+  await assert.rejects(context.collectInventoryIds(async () => 2, async () => [{ id: 'a' }, { id: 'a' }]));
+  await assert.rejects(context.collectInventoryIds(async () => -1, async () => []));
+  let countReads = 0;
+  await assert.rejects(context.collectInventoryIds(async () => ++countReads, async () => [{ id: 'a' }]));
   const names = {};
   const resolved = await context.resolveSerials(['inventory-uuid-a', 'inventory-uuid-b'], async () => [
     { id: 'inventory-uuid-a', serialNumber: '000456994617', name: ' Phil Test E410 ' },
@@ -69,5 +81,9 @@ vm.runInContext(source.replace(/export /g, ''), context);
   assert.doesNotMatch(button, /size="sm"|borderRadius=/);
   assert.match(page, /encodeURIComponent\(serial\)/);
   for (const kind of ['Entity', 'Venue']) assert.match(fs.readFileSync(`src/pages/${kind}Page/Layout/InventoryCard/index.tsx`, 'utf8'), /<BulkPushConfig/);
+  const inventoryPage = fs.readFileSync('src/pages/InventoryPage/Table/index.tsx', 'utf8');
+  assert.match(inventoryPage, /<BulkPushConfig loadIds={loadScopeIds}/);
+  assert.match(inventoryPage, /Filter by entity/);
+  assert.match(inventoryPage, /Filter by venue/);
   console.log('PASS: complete hierarchy, deduplication, fail-closed scope, per-AP results, authorization stop and both buttons');
 })().catch((error) => { console.error(error); process.exit(1); });

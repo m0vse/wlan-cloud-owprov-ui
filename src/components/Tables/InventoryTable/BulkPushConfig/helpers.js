@@ -18,6 +18,23 @@ export async function collectTargets(kind, id, read) {
 }
 
 // Entity/venue devices contain inventory UUIDs, not gateway serial numbers.
+export async function collectInventoryIds(readCount, readPage) {
+  const count = await readCount();
+  if (!Number.isSafeInteger(count) || count < 0) throw new Error('Invalid inventory count');
+  const ids = new Set();
+  for (let offset = 0; offset < count; offset += 100) {
+    const page = await readPage(offset, 100);
+    if (!Array.isArray(page) || page.length !== Math.min(100, count - offset))
+      throw new Error('Incomplete inventory page');
+    for (const tag of page) {
+      if (typeof tag.id !== 'string' || !tag.id || ids.has(tag.id)) throw new Error('Unstable inventory');
+      ids.add(tag.id);
+    }
+  }
+  if (await readCount() !== count) throw new Error('Inventory changed while loading');
+  return [...ids];
+}
+
 export async function resolveSerials(ids, readInventory, onResolved = () => {}) {
   const serials = new Set();
   for (let offset = 0; offset < ids.length; offset += 100) {

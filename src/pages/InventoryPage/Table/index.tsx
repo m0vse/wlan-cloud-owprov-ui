@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { Box, FormControl, FormLabel, Switch, useBoolean, useDisclosure } from '@chakra-ui/react';
+import { Alert, AlertIcon, Box, FormControl, FormLabel, Select, Switch, useBoolean, useDisclosure } from '@chakra-ui/react';
+import { useQuery } from '@tanstack/react-query';
 import { CellContext } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { v4 as uuid } from 'uuid';
@@ -15,6 +16,10 @@ import DeviceSearchBar from 'components/SearchBars/DeviceSearch';
 import EntityCell from 'components/TableCells/EntityCell';
 import VenueCell from 'components/TableCells/VenueCell';
 import ConfigurationPushModal from 'components/Tables/InventoryTable/ConfigurationPushModal';
+import BulkPushConfig from 'components/Tables/InventoryTable/BulkPushConfig';
+import { collectTargets, collectInventoryIds } from 'components/Tables/InventoryTable/BulkPushConfig/helpers';
+import { useGetEntityTree, TreeEntity, TreeVenue } from 'hooks/Network/Entity';
+import { axiosProv } from 'utils/axiosInstances';
 import CreateConfigurationModal from 'components/Tables/InventoryTable/CreateTagModal';
 import EditTagModal from 'components/Tables/InventoryTable/EditTagModal';
 import {
@@ -34,6 +39,46 @@ const InventoryTable = () => {
     defaultOrder: ['serialNumber', 'name', 'entity', 'venue', 'subscriber', 'description', 'modified', 'actions'],
   });
   const [onlyUnassigned, setOnlyUnassigned] = useBoolean(false);
+  const [entityFilter, setEntityFilter] = useState('');
+  const [venueFilter, setVenueFilter] = useState('');
+  const { data: entityTree } = useGetEntityTree();
+  const entities: { id: string; name: string }[] = [];
+  const venues: { id: string; name: string }[] = [];
+  const walkVenues = (node: TreeVenue) => {
+    venues.push({ id: node.uuid, name: node.name });
+    node.children?.forEach(walkVenues);
+  };
+  const walkEntities = (node: TreeEntity, inScope = false) => {
+    entities.push({ id: node.uuid, name: node.name });
+    const included = !entityFilter || inScope || node.uuid === entityFilter;
+    if (included) node.venues?.forEach(walkVenues);
+    node.children?.forEach((child) => walkEntities(child, included));
+  };
+  if (entityTree) walkEntities(entityTree);
+  const scoped = !!(entityFilter || venueFilter);
+  const loadScopeIds = async (): Promise<string[]> => {
+    if (scoped) return collectTargets(venueFilter ? 'venue' : 'entity', venueFilter || entityFilter,
+      async (kind: string, id: string) => (await axiosProv.get(`${kind}/${encodeURIComponent(id)}`)).data);
+    const suffix = onlyUnassigned ? '&unassigned=true' : '';
+    return collectInventoryIds(
+      async () => (await axiosProv.get(`inventory?countOnly=true${suffix}`)).data.count,
+      async (offset: number, limit: number) => (await axiosProv.get(`inventory?limit=${limit}&offset=${offset}&orderBy=serialNumber:a${suffix}`)).data.taglist,
+    );
+  };
+  const scopedTags = useQuery(['inventory-scope', entityFilter, venueFilter], async () => {
+    const ids = await loadScopeIds();
+    const rows: InventoryTagApiResponse[] = [];
+    for (let offset = 0; offset < ids.length; offset += 100) {
+      const batch = ids.slice(offset, offset + 100);
+      // eslint-disable-next-line no-await-in-loop
+      const response = await axiosProv.get(`inventory?withExtendedInfo=true&select=${batch.map(encodeURIComponent).join(',')}&limit=100&offset=0`);
+      const page = response.data.taglist as InventoryTagApiResponse[];
+      if (!Array.isArray(page) || batch.some((id) => page.filter((row) => row.id === id).length !== 1))
+        throw new Error('Incomplete inventory scope');
+      rows.push(...page.filter((row) => batch.includes(row.id)));
+    }
+    return rows;
+  }, { enabled: scoped });
   const [serialNumber, setSerialNumber] = useState<string>('');
   const [tag, setTag] = useState<Device | { serialNumber: string } | undefined>(undefined);
   const { isOpen: isEditOpen, onOpen: openEdit, onClose: closeEdit } = useDisclosure();
@@ -44,13 +89,14 @@ const InventoryTable = () => {
   const upgradeModalProps = useDisclosure();
   const pushConfiguration = usePushConfig({ onSuccess: () => openPush() });
   const {
-    data: count,
+    data: unfilteredCount,
     isFetching: isFetchingCount,
     refetch: refetchCount,
   } = useGetInventoryCount({
-    enabled: true,
+    enabled: !scoped,
     onlyUnassigned,
   });
+  const count = scoped ? scopedTags.data?.length : unfilteredCount;
   const {
     data: tags,
     isFetching: isFetchingTags,
@@ -64,7 +110,7 @@ const InventoryTable = () => {
       id: sort.id,
       sort: sort.desc ? 'dsc' : 'asc',
     })),
-    enabled: true,
+    enabled: !scoped,
     count,
     onlyUnassigned,
   });
@@ -85,12 +131,14 @@ const InventoryTable = () => {
     setTag(newTag);
     openEdit();
   };
+  const refreshInventory = scoped ? scopedTags.refetch : refetchCount;
+  const refreshInventoryTags = scoped ? scopedTags.refetch : refetchTags;
 
   const memoizedActions = useCallback(
     (cell: CellContext<InventoryTagApiResponse, unknown>) => (
       <Actions
         cell={cell.row as unknown as { original: Device }}
-        refreshTable={refetchCount}
+        refreshTable={refreshInventory}
         key={uuid()}
         openEditModal={openEditModal}
         onOpenScan={onOpenScan}
@@ -98,7 +146,7 @@ const InventoryTable = () => {
         onOpenUpgradeModal={onOpenUpgradeModal}
       />
     ),
-    [],
+    [refreshInventory],
   );
   const memoizedDate = useCallback(
     (cell: CellContext<InventoryTagApiResponse, unknown>, key: 'modified') => (
@@ -228,10 +276,22 @@ const InventoryTable = () => {
 
   const onUnassignedToggle = () => {
     setOnlyUnassigned.toggle();
+    setEntityFilter(''); setVenueFilter('');
+    tableController.onPaginationChange({ ...tableController.pageInfo, pageIndex: 0 });
   };
+
+  const scopedRows = scopedTags.data ? [...scopedTags.data].sort((a, b) => {
+    for (const sort of tableController.sortBy) {
+      const compared = String(a[sort.id as keyof InventoryTagApiResponse] ?? '').localeCompare(String(b[sort.id as keyof InventoryTagApiResponse] ?? ''), undefined, { numeric: true });
+      if (compared) return sort.desc ? -compared : compared;
+    }
+    return 0;
+  }).slice(tableController.pageInfo.pageIndex * tableController.pageInfo.pageSize,
+    (tableController.pageInfo.pageIndex + 1) * tableController.pageInfo.pageSize) : [];
 
   return (
     <Box>
+      {scoped && scopedTags.isError && <Alert status="error" mb={3}><AlertIcon />Unable to load this inventory scope. Config push is disabled.</Alert>}
       <DataGrid<InventoryTagApiResponse>
         controller={tableController}
         header={{
@@ -239,31 +299,40 @@ const InventoryTable = () => {
           objectListed: t('devices.title'),
           otherButtons: (
             <>
+              <Select aria-label="Filter by entity" placeholder="All entities" value={entityFilter} w="190px" mr={2}
+                onChange={(event) => { setEntityFilter(event.target.value); setVenueFilter(''); setOnlyUnassigned.off(); tableController.onPaginationChange({ ...tableController.pageInfo, pageIndex: 0 }); }}>
+                {entities.map((entity) => <option key={entity.id} value={entity.id}>{entity.name}</option>)}
+              </Select>
+              <Select aria-label="Filter by venue" placeholder="All venues" value={venueFilter} w="190px" mr={2}
+                onChange={(event) => { setVenueFilter(event.target.value); setOnlyUnassigned.off(); tableController.onPaginationChange({ ...tableController.pageInfo, pageIndex: 0 }); }}>
+                {venues.map((venue) => <option key={venue.id} value={venue.id}>{venue.name}</option>)}
+              </Select>
               <FormControl display="flex" w="unset" alignItems="center" mr={2}>
                 <FormLabel htmlFor="unassigned-switch" mb="0">
                   {t('devices.unassigned_only')}
                 </FormLabel>
                 <Switch
                   id="unassigned-switch"
-                  defaultChecked={onlyUnassigned}
+                  isChecked={onlyUnassigned}
                   onChange={onUnassignedToggle}
                   size="lg"
                 />
               </FormControl>
+              <BulkPushConfig loadIds={loadScopeIds} scopeLabel="Push config to all devices matching this inventory scope (all pages)" disabled={scoped && (scopedTags.isLoading || scopedTags.isError)} />
               <ExportDevicesTableButton />
             </>
           ),
-          addButton: <CreateConfigurationModal refresh={refetchCount} />,
+          addButton: <CreateConfigurationModal refresh={refreshInventory} />,
           leftContent: <DeviceSearchBar onClick={onSearchClick} />,
         }}
         columns={onlyUnassigned ? columns.filter((col) => col.id !== 'entity' && col.id !== 'venue') : columns}
-        data={tags}
-        isLoading={isFetchingCount || isFetchingTags}
+        data={scoped ? scopedRows : tags}
+        isLoading={scoped ? scopedTags.isFetching : isFetchingCount || isFetchingTags}
         options={{
           count,
           isManual: true,
           onRowClick: (device) => () => openEditModal(device),
-          refetch: refetchCount,
+          refetch: refreshInventory,
           minimumHeight: '200px',
           showAsCard: true,
         }}
@@ -272,7 +341,7 @@ const InventoryTable = () => {
         isOpen={isEditOpen}
         onClose={closeEdit}
         tag={tag}
-        refresh={refetchTags}
+        refresh={refreshInventoryTags}
         pushConfig={pushConfiguration}
         onOpenScan={onOpenScan}
         onOpenFactoryReset={onOpenFactoryReset}

@@ -7,7 +7,9 @@ import { axiosProv } from 'utils/axiosInstances';
 import { collectTargets, resolveSerials, pushTargets } from './helpers';
 
 type Result = { serial: string; status: string; detail: string };
-const BulkPushConfig = ({ kind, id }: { kind: 'entity' | 'venue'; id: string }) => {
+const BulkPushConfig = ({ kind, id, loadIds, disabled = false, scopeLabel }: {
+  kind?: 'entity' | 'venue'; id?: string; loadIds?: () => Promise<string[]>; disabled?: boolean; scopeLabel?: string;
+}) => {
   const modal = useDisclosure();
   const [targets, setTargets] = React.useState<string[]>([]);
   const [names, setNames] = React.useState<Record<string, string>>({});
@@ -22,7 +24,7 @@ const BulkPushConfig = ({ kind, id }: { kind: 'entity' | 'venue'; id: string }) 
     let resolved: string[] = [];
     try {
       // Uses the operator's existing session; server permissions apply to every read/push.
-      const inventoryIds = await collectTargets(kind, id, async (type: string, uuid: string) =>
+      const inventoryIds = loadIds ? await loadIds() : await collectTargets(kind, id, async (type: string, uuid: string) =>
         (await axiosProv.get(`${type}/${encodeURIComponent(uuid)}`)).data);
       const resolvedNames: Record<string, string> = {};
       resolved = await resolveSerials(inventoryIds, async (ids: string[]) =>
@@ -41,8 +43,8 @@ const BulkPushConfig = ({ kind, id }: { kind: 'entity' | 'venue'; id: string }) 
     } finally { setRunning(false); }
   };
   return <>
-    <Tooltip hasArrow placement="top" label={`Push config to all devices in this ${kind} and its descendants`}>
-      <IconButton colorScheme="teal" icon={<PaperPlaneTilt size={20} />} aria-label="Push config" onClick={prepare} isDisabled={!id || loading || running} mr={2} />
+    <Tooltip hasArrow placement="top" label={scopeLabel ?? `Push config to all devices in this ${kind} and its descendants`}>
+      <IconButton colorScheme="teal" icon={<PaperPlaneTilt size={20} />} aria-label="Push config" onClick={prepare} isDisabled={disabled || (!loadIds && !id) || loading || running} mr={2} />
     </Tooltip>
     <Modal isOpen={modal.isOpen} onClose={modal.onClose} size="xl" closeOnOverlayClick={!running && !loading} closeOnEsc={!running && !loading}>
       <ModalOverlay /><ModalContent>
