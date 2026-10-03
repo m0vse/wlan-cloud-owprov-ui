@@ -36,7 +36,7 @@ const BulkPushConfig = ({ kind, id }: { kind: 'entity' | 'venue'; id: string }) 
   };
   return <>
     <Tooltip hasArrow placement="top" label={`Push config to all devices in this ${kind} and its descendants`}>
-      <IconButton size="sm" colorScheme="teal" borderRadius="md" icon={<PaperPlaneTilt size={20} />} aria-label="Push config" onClick={prepare} isDisabled={!id || loading || running} mr={2} />
+      <IconButton colorScheme="teal" icon={<PaperPlaneTilt size={20} />} aria-label="Push config" onClick={prepare} isDisabled={!id || loading || running} mr={2} />
     </Tooltip>
     <Modal isOpen={modal.isOpen} onClose={modal.onClose} size="xl" closeOnOverlayClick={!running && !loading} closeOnEsc={!running && !loading}>
       <ModalOverlay /><ModalContent>

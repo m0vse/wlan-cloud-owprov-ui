@@ -25,6 +25,8 @@ vm.runInContext(source.replace(/export /g, ''), context);
   assert.deepEqual(calls, ['a', 'b', 'c']);
   const page = fs.readFileSync('src/components/Tables/InventoryTable/BulkPushConfig/index.tsx', 'utf8');
   assert.match(page, /title="Push config"/);
+  const button = page.match(/<IconButton[^>]+/)[0];
+  assert.doesNotMatch(button, /size="sm"|borderRadius=/);
   assert.match(page, /encodeURIComponent\(serial\)/);
   for (const kind of ['Entity', 'Venue']) assert.match(fs.readFileSync(`src/pages/${kind}Page/Layout/InventoryCard/index.tsx`, 'utf8'), /<BulkPushConfig/);
   console.log('PASS: complete hierarchy, deduplication, fail-closed scope, per-AP results, authorization stop and both buttons');
