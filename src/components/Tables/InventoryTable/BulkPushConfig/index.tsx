@@ -10,6 +10,7 @@ type Result = { serial: string; status: string; detail: string };
 const BulkPushConfig = ({ kind, id }: { kind: 'entity' | 'venue'; id: string }) => {
   const modal = useDisclosure();
   const [targets, setTargets] = React.useState<string[]>([]);
+  const [names, setNames] = React.useState<Record<string, string>>({});
   const [results, setResults] = React.useState<Result[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [running, setRunning] = React.useState(false);
@@ -17,14 +18,17 @@ const BulkPushConfig = ({ kind, id }: { kind: 'entity' | 'venue'; id: string }) 
   const [error, setError] = React.useState('');
   const prepare = async () => {
     modal.onOpen();
-    setTargets([]); setResults([]); setStarted(false); setError(''); setLoading(true);
+    setTargets([]); setNames({}); setResults([]); setStarted(false); setError(''); setLoading(true);
     let resolved: string[] = [];
     try {
       // Uses the operator's existing session; server permissions apply to every read/push.
       const inventoryIds = await collectTargets(kind, id, async (type: string, uuid: string) =>
         (await axiosProv.get(`${type}/${encodeURIComponent(uuid)}`)).data);
+      const resolvedNames: Record<string, string> = {};
       resolved = await resolveSerials(inventoryIds, async (ids: string[]) =>
-        (await axiosProv.get(`inventory?select=${ids.map(encodeURIComponent).join(',')}&limit=100&offset=0`)).data.taglist);
+        (await axiosProv.get(`inventory?select=${ids.map(encodeURIComponent).join(',')}&limit=100&offset=0`)).data.taglist,
+        (device: { serial: string; name: string }) => { resolvedNames[device.serial] = device.name; });
+      setNames(resolvedNames);
       setTargets(resolved);
     } catch {
       setError('Unable to load the complete scope. Nothing was pushed.');
@@ -48,10 +52,10 @@ const BulkPushConfig = ({ kind, id }: { kind: 'entity' | 'venue'; id: string }) 
           {loading ? <Text>Loading devices…</Text> : !error && <>
             <Text mb={3}>{results.length} of {targets.length} processed</Text>
             {started && <Progress value={targets.length ? results.length / targets.length * 100 : 0} mb={3} />}
-            <TableContainer maxH="360px" overflowY="auto"><Table size="sm"><Thead><Tr><Th>AP serial</Th><Th>Status</Th></Tr></Thead><Tbody>
+            <TableContainer maxH="360px" overflowY="auto"><Table size="sm"><Thead><Tr><Th>AP name</Th><Th>Status</Th></Tr></Thead><Tbody>
               {targets.map((serial) => {
                 const result = results.find((item) => item.serial === serial);
-                return <Tr key={serial}><Td fontFamily="mono">{serial}</Td><Td><Badge colorScheme={result?.status === 'Sent' ? 'green' : result?.status === 'Failed' ? 'red' : 'gray'}>{result?.status ?? 'Pending'}</Badge>{result?.detail && <Text fontSize="xs" mt={1}>{result.detail}</Text>}</Td></Tr>;
+                return <Tr key={serial}><Td><Text fontWeight="semibold">{names[serial] || 'Unnamed AP'}</Text><Text fontFamily="mono" fontSize="xs" color="gray.500">{serial}</Text></Td><Td><Badge colorScheme={result?.status === 'Sent' ? 'green' : result?.status === 'Failed' ? 'red' : 'gray'}>{result?.status ?? 'Pending'}</Badge>{result?.detail && <Text fontSize="xs" mt={1}>{result.detail}</Text>}</Td></Tr>;
               })}
             </Tbody></Table></TableContainer>
             {started && !running && <Text fontSize="sm" mt={3}>Sent means accepted by the controller; check AP status for successful application.</Text>}

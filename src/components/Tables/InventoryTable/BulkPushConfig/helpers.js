@@ -18,7 +18,7 @@ export async function collectTargets(kind, id, read) {
 }
 
 // Entity/venue devices contain inventory UUIDs, not gateway serial numbers.
-export async function resolveSerials(ids, readInventory) {
+export async function resolveSerials(ids, readInventory, onResolved = () => {}) {
   const serials = new Set();
   for (let offset = 0; offset < ids.length; offset += 100) {
     const batch = ids.slice(offset, offset + 100);
@@ -29,15 +29,20 @@ export async function resolveSerials(ids, readInventory) {
       if (matches.length !== 1 || typeof matches[0].serialNumber !== 'string' || !matches[0].serialNumber)
         throw new Error('Incomplete inventory mapping');
       serials.add(matches[0].serialNumber);
+      onResolved({ serial: matches[0].serialNumber, name: typeof matches[0].name === 'string' ? matches[0].name.trim() : '' });
     }
   }
   return [...serials].sort();
 }
 
-export async function pushTargets(targets, push, progress) {
-  const results = [];
+export async function pushTargets(targets, push, progress, concurrency = 20) {
+  const results = new Array(targets.length);
   let denied = false;
-  for (const serial of targets) {
+  let cursor = 0;
+  async function worker() {
+    while (cursor < targets.length) {
+    const index = cursor++;
+    const serial = targets[index];
     let result;
     if (denied) result = { serial, status: 'Skipped', detail: 'Access denied earlier in this batch' };
     else {
@@ -52,8 +57,11 @@ export async function pushTargets(targets, push, progress) {
         result = { serial, status: 'Failed', detail: denied ? 'Access denied' : 'Request failed; check the AP before retrying' };
       }
     }
-    results.push(result);
-    progress([...results]);
+    results[index] = result;
+    progress(results.filter(Boolean));
+    }
   }
+  const limit = Math.max(1, Math.min(50, Math.floor(concurrency) || 20));
+  await Promise.all(Array.from({ length: Math.min(limit, targets.length) }, () => worker()));
   return results;
 }

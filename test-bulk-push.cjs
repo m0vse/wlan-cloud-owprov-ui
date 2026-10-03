@@ -14,12 +14,14 @@ vm.runInContext(source.replace(/export /g, ''), context);
   };
   assert.deepEqual(Array.from(await context.collectTargets('entity', 'e', async (k, id) => nodes[`${k}:${id}`])), ['a', 'b', 'c', 'd']);
   await assert.rejects(context.collectTargets('venue', 'bad', async () => undefined));
+  const names = {};
   const resolved = await context.resolveSerials(['inventory-uuid-a', 'inventory-uuid-b'], async () => [
-    { id: 'inventory-uuid-a', serialNumber: '000456994617' },
+    { id: 'inventory-uuid-a', serialNumber: '000456994617', name: ' Phil Test E410 ' },
     { id: 'inventory-uuid-b', serialNumber: 'fc1165bea5be' },
     { id: 'outside-scope', serialNumber: 'DO-NOT-PUSH' },
-  ]);
+  ], ({ serial, name }) => { names[serial] = name; });
   assert.deepEqual(Array.from(resolved), ['000456994617', 'fc1165bea5be']);
+  assert.deepEqual(names, { '000456994617': 'Phil Test E410', fc1165bea5be: '' });
   await assert.rejects(context.resolveSerials(['missing'], async () => []));
   await assert.rejects(context.resolveSerials(['duplicate'], async () => [{ id: 'duplicate', serialNumber: 'a' }, { id: 'duplicate', serialNumber: 'b' }]));
   const batches = [];
@@ -34,11 +36,35 @@ vm.runInContext(source.replace(/export /g, ''), context);
     if (s === 'b') return { errorCode: 7 };
     if (s === 'c') throw { response: { status: 403 } };
     return { errorCode: 0 };
-  }, () => {});
+  }, () => {}, 1);
   assert.deepEqual(Array.from(results, (r) => r.status), ['Sent', 'Failed', 'Failed', 'Skipped']);
   assert.deepEqual(calls, ['a', 'b', 'c']);
+  let active = 0;
+  let maxActive = 0;
+  const fleet = Array.from({ length: 55 }, (_, n) => `ap-${n}`);
+  const parallel = await context.pushTargets(fleet, async () => {
+    active++; maxActive = Math.max(active, maxActive);
+    await Promise.resolve();
+    active--;
+    return { errorCode: 0 };
+  }, () => {});
+  assert.equal(maxActive, 20);
+  assert.equal(parallel.length, 55);
+  assert.deepEqual(Array.from(parallel, (r) => r.serial), fleet);
+  assert.ok(parallel.every((r) => r.status === 'Sent'));
+  calls = [];
+  const stopped = await context.pushTargets(fleet, async (serial) => {
+    calls.push(serial);
+    if (serial === 'ap-0') throw { response: { status: 403 } };
+    await Promise.resolve();
+    return { errorCode: 0 };
+  }, () => {});
+  assert.equal(calls.length, 20); // Already in-flight requests complete; no more are dispatched.
+  assert.equal(stopped.filter((r) => r.status === 'Skipped').length, 35);
   const page = fs.readFileSync('src/components/Tables/InventoryTable/BulkPushConfig/index.tsx', 'utf8');
   assert.match(page, /title="Push config"/);
+  assert.match(page, /<Th>AP name<\/Th>/);
+  assert.match(page, /names\[serial\] \|\| 'Unnamed AP'/);
   const button = page.match(/<IconButton[^>]+/)[0];
   assert.doesNotMatch(button, /size="sm"|borderRadius=/);
   assert.match(page, /encodeURIComponent\(serial\)/);
