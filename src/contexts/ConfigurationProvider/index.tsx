@@ -1,9 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
+import { useToast } from '@chakra-ui/react';
+import { useQuery } from '@tanstack/react-query';
+import { collectInheritedResourceIds } from './inheritedResources';
 import { useGetConfiguration } from 'hooks/Network/Configurations';
-import { useGetEntity } from 'hooks/Network/Entity';
 import { useGetResources } from 'hooks/Network/Resources';
-import { useGetVenue } from 'hooks/Network/Venues';
 import { Resource } from 'models/Resource';
+import { axiosProv } from 'utils/axiosInstances';
 
 const ConfigurationContext = React.createContext<{
   configurationId: string;
@@ -27,29 +29,48 @@ export const ConfigurationProvider = ({
     if (split?.[0] && split?.[1] && split[0] === 'ven') {
       return split[1];
     }
-    return getConfig.data?.venue;
+    return getConfig.isPreviousData ? undefined : getConfig.data?.venue;
   };
   const finalEntityId = () => {
     const split = entityId?.split(':');
     if (split?.[0] && split?.[1] && split[0] === 'ent') {
       return split[1];
     }
-    return getConfig.data?.entity;
+    return getConfig.isPreviousData ? undefined : getConfig.data?.entity;
   };
 
-  const getVenue = useGetVenue({ id: venueId() });
-  const getEntity = useGetEntity({ id: finalEntityId() });
+  const toast = useToast();
+  const scope = { venue: venueId(), entity: finalEntityId() };
+  const inheritedResources = useQuery(
+    ['configuration-resource-ancestry', scope.venue ?? '', scope.entity ?? ''],
+    () => collectInheritedResourceIds(scope, async (kind, id) => {
+      const { data } = await axiosProv.get(`${kind}/${encodeURIComponent(id)}?withExtendedInfo=true`);
+      return data;
+    }),
+    { enabled: Boolean(scope.venue || scope.entity), staleTime: 0, retry: false, keepPreviousData: false },
+  );
+  useEffect(() => {
+    if (inheritedResources.isError && !toast.isActive('resource-ancestry-error')) {
+      toast({
+        id: 'resource-ancestry-error',
+        title: 'Unable to load inherited resources',
+        description: 'Check access to the selected venue and its parent entities. No configuration has been changed.',
+        status: 'error',
+        isClosable: true,
+      });
+    }
+  }, [inheritedResources.isError, toast]);
   const getResources = useGetResources({
     pageInfo: null,
-    select: getVenue.data?.variables ?? getEntity.data?.variables,
+    select: inheritedResources.data ?? [],
   });
 
   const value = useMemo(
     () => ({
       configurationId,
-      availableResources: getResources.data,
+      availableResources: inheritedResources.isSuccess ? getResources.data : [],
     }),
-    [getResources.data],
+    [configurationId, getResources.data, inheritedResources.isSuccess],
   );
 
   return <ConfigurationContext.Provider value={value}>{children}</ConfigurationContext.Provider>;

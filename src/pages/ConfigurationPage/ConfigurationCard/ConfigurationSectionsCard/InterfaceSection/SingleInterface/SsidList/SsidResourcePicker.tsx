@@ -25,7 +25,7 @@ const SsidResourcePicker = ({ name, isDisabled }: Props) => {
         )
         .map((resource) => ({ value: resource.id, label: resource.name }));
     return [];
-  }, [context.availableResources?.length]);
+  }, [context.availableResources]);
 
   const selectValue = React.useMemo(() => {
     if (!field.value || !field.value.__variableBlock) return '';
