@@ -47,6 +47,13 @@ const SingleRadio = ({ isDisabled, namePrefix, remove, canEditBand }: Props) => 
       {value !== undefined && value.__variableBlock === undefined ? (
         <>
           <SimpleGrid minChildWidth="300px" spacing="20px" mb={8} mt={2} w="100%">
+            <ToggleField
+              name={`${namePrefix}.enable`}
+              label="Enabled"
+              definitionKey="radio.enable"
+              defaultValue={true}
+              isDisabled={isDisabled}
+            />
             <SelectField
               name={`${namePrefix}.band`}
               label="band"

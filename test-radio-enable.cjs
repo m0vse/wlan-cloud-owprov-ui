@@ -1,0 +1,27 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const Module = require('node:module');
+const ts = require('typescript');
+const directory = 'src/pages/ConfigurationPage/ConfigurationCard/ConfigurationSectionsCard/RadiosSection/';
+const filename = path.resolve(directory, 'radiosConstants.ts');
+const loaded = new Module(filename, module);
+loaded.paths = Module._nodeModulePaths(path.dirname(filename));
+loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS },
+}).outputText, filename);
+const schema = loaded.exports.SINGLE_RADIO_SCHEMA((key) => key, true);
+assert.equal(schema.cast({}).enable, true);
+assert.equal(schema.cast({ enable: true }).enable, true);
+const disabled = schema.cast({ enable: false, band: '5G', channel: '116' });
+assert.equal(disabled.enable, false);
+assert.equal(JSON.parse(JSON.stringify(disabled)).enable, false);
+assert.equal(disabled.channel, '116');
+assert.equal(schema.cast({ ...disabled, enable: true }).channel, '116');
+const editor = fs.readFileSync(directory + 'SingleRadio.tsx', 'utf8');
+const toggle = editor.match(/<ToggleField\s+name=\{`\$\{namePrefix\}\.enable`\}[\s\S]*?\/>/)[0];
+assert.match(toggle, /defaultValue=\{true\}/);
+assert.doesNotMatch(toggle, /falseIsUndefined/);
+assert.match(fs.readFileSync(directory + 'LockedRadio.jsx', 'utf8'), /value=\{data\.enable !== false\}/);
+assert.match(fs.readFileSync('src/components/Modals/Resources/Sections/SingleRadio/index.tsx', 'utf8'), /<SingleRadio/);
+console.log('PASS: radio defaults, explicit disable round-trip, retained settings and shared resource editor');

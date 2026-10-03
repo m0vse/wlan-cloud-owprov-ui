@@ -39,6 +39,7 @@ const LockedRadio = ({ variableBlockId }) => {
   return (
     <>
       <SimpleGrid minChildWidth="300px" spacing="20px">
+        <FastToggleInput {...props('enable')} label="Enabled" value={data.enable !== false} />
         <FastSelectInput
           {...props('band')}
           isRequired

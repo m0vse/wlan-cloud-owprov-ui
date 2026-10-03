@@ -2,6 +2,7 @@ import { object, number, string, array, bool } from 'yup';
 
 export const SINGLE_RADIO_SCHEMA = (t: (str: string) => string, useDefault = false, band = '2G') => {
   const shape = object().shape({
+    enable: bool().default(true),
     band: string().required(t('form.required')).default(band),
     bandwidth: number().required(t('form.required')).integer().default(5),
     channel: string().required(t('form.required')).default('auto'),
