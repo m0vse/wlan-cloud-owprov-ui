@@ -12,6 +12,13 @@ export const SINGLE_RADIO_SCHEMA = (t: (str: string) => string, useDefault = fal
     'channel-width': number().required(t('form.required')).integer().default(40),
     mimo: string().default(undefined),
     'tx-power': number().required(t('form.required')).moreThan(-1).lessThan(31).integer().default(0),
+    'he-6ghz-settings': object()
+      .shape({
+        'power-type': string()
+          .oneOf(['indoor-power-indoor', 'standard-power', 'very-low-power'])
+          .default(undefined),
+      })
+      .default(undefined),
     'legacy-rates': bool().default(undefined),
     'allow-dfs': bool().default(true),
     'beacon-interval': number().required(t('form.required')).moreThan(14).lessThan(65535).integer().default(100),

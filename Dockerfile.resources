@@ -6,6 +6,7 @@ COPY . .
 RUN node test-resource-inheritance.cjs
 RUN node test-bulk-push.cjs
 RUN node test-radio-enable.cjs
+RUN node test-6ghz-power-mode.cjs
 RUN node test-auth-protocol.cjs
 RUN npm run build
 

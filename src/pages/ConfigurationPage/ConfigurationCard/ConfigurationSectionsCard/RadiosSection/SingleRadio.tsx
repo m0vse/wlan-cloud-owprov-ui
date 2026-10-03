@@ -143,6 +143,20 @@ const SingleRadio = ({ isDisabled: isFormDisabled, namePrefix, remove, canEditBa
               isRequired
               w={24}
             />
+            {value?.band === '6G' && (
+              <SelectField
+                name={`${namePrefix}.he-6ghz-settings.power-type`}
+                label="6 GHz power mode"
+                isDisabled={isDisabled}
+                emptyIsUndefined
+                options={[
+                  { value: '', label: 'Default' },
+                  { value: 'indoor-power-indoor', label: 'LPI (indoor)' },
+                  { value: 'standard-power', label: 'Standard Power' },
+                  { value: 'very-low-power', label: 'VLP' },
+                ]}
+              />
+            )}
             <ToggleField
               name={`${namePrefix}.legacy-rates`}
               label="legacy-rates"
