@@ -12,6 +12,7 @@ import FactoryResetModal from 'components/Modals/SubscriberDevice/FactoryResetMo
 import FirmwareUpgradeModal from 'components/Modals/SubscriberDevice/FirmwareUpgradeModal';
 import WifiScanModal from 'components/Modals/SubscriberDevice/WifiScanModal';
 import ConfigurationPushModal from 'components/Tables/InventoryTable/ConfigurationPushModal';
+import BulkPushConfig from 'components/Tables/InventoryTable/BulkPushConfig';
 import CreateTagModal from 'components/Tables/InventoryTable/CreateTagModal';
 import EditTagModal from 'components/Tables/InventoryTable/EditTagModal';
 import ImportDeviceCsvModal from 'components/Tables/InventoryTable/ImportDeviceCsvModal';
@@ -160,6 +161,7 @@ const EntityInventoryCard = ({ id }: Props) => {
           {t('inventory.title')}
         </Heading>
         <Spacer />
+        <BulkPushConfig kind="entity" id={id} />
         <ExportDevicesTableButton serialNumbers={getEntity.data?.devices ?? []} />
         <ImportDeviceCsvModal
           refresh={getEntity.refetch}
