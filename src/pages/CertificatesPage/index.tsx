@@ -4,7 +4,7 @@ import {
   Table, Tbody, Td, Text, Textarea, Th, Thead, Tr, VStack,
 } from '@chakra-ui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { axiosProv } from 'utils/axiosInstances';
+import { axiosPki as axiosProv } from 'utils/pkiClient';
 import MigrationEvidence from './MigrationEvidence';
 import { useAuth } from 'contexts/AuthProvider';
 
@@ -16,13 +16,17 @@ type Certificate = {
   revoked: number;
   managementAcceptedAt?: number;
   issuanceKind?: string;
+  observed?: boolean;
 };
 type Status = {
   certificates: Certificate[];
   issuers: string[];
   activeIssuer: string;
+  preparedIssuer?: string;
+  phase?: string;
+  setup?: { state: string; message: string };
   gatewayEnforcement: string;
-  roots: { fingerprint: string; name: string; expires: number }[];
+  roots: { fingerprint: string; name: string; expires: number; state?: string }[];
   activeRoot: string;
 };
 type Audit = { stamp: number; actor: string; action: string; target: string };
@@ -76,8 +80,9 @@ const CertificatesPage = () => {
       {status.data && !ready && <Alert status="warning"><AlertIcon />Gateway enforcement is pending. Live enrollment, revocation and CA retirement are unavailable.</Alert>}
       {status.data && (
         <Box>
-          {status.data.roots.map((root) => <HStack key={root.fingerprint} flexWrap="wrap"><Text>{root.name} — expires {date(root.expires)} {root.fingerprint === status.data?.activeRoot ? '(active)' : '(retained)'}</Text>{root.fingerprint !== status.data?.activeRoot && <Button size="sm" isLoading={retirement.isLoading} onClick={() => retirement.mutate(root.fingerprint)}>Review retirement readiness</Button>}</HStack>)}
-          <Text>Active issuing CA: {status.data.activeIssuer}</Text>
+          {status.data.roots.map((root) => <HStack key={root.fingerprint} flexWrap="wrap"><Text>{root.name} — expires {date(root.expires)} ({root.state || (root.fingerprint === status.data?.activeRoot ? 'active' : 'retained')})</Text>{root.state !== 'prepared' && root.fingerprint !== status.data?.activeRoot && <Button size="sm" isLoading={retirement.isLoading} onClick={() => retirement.mutate(root.fingerprint)}>Review retirement readiness</Button>}</HStack>)}
+          <Text>{status.data.preparedIssuer ? `Prepared issuing CA: ${status.data.preparedIssuer}` : `Active issuing CA: ${status.data.activeIssuer}`}</Text>
+          {status.data.setup && <Text>{status.data.setup.message}</Text>}
           <Text>Retained issuing CAs: {status.data.issuers.length}. Keep existing trust until every AP has migrated.</Text>
         </Box>
       )}
@@ -96,10 +101,10 @@ const CertificatesPage = () => {
               <Td>{cert.device}</Td><Td title={cert.fingerprint}>{cert.fingerprint.slice(0, 16)}…</Td>
               <Td>{date(cert.expires)}</Td>
               <Td><Badge colorScheme={cert.revoked || cert.expires * 1000 <= Date.now() ? 'red' : 'green'}>
-                {cert.revoked ? 'Revoked' : cert.expires * 1000 <= Date.now() ? 'Expired' : 'Issued'}
+                {cert.revoked ? 'Revoked' : cert.expires * 1000 <= Date.now() ? 'Expired' : cert.observed ? 'Retained certificate' : 'Issued'}
               </Badge></Td>
               <Td title={cert.issuer}>{cert.issuer.slice(0, 16)}…</Td>
-              <Td>{cert.managementAcceptedAt ? `${date(cert.managementAcceptedAt)} (${cert.issuanceKind || 'unclassified'})` : 'Pending'}</Td>
+              <Td>{cert.managementAcceptedAt ? `${date(cert.managementAcceptedAt)} (${cert.issuanceKind || 'unclassified'})` : cert.observed ? 'Observed public certificate; migration not verified' : 'Pending'}</Td>
             </Tr>
           ))}</Tbody>
         </Table>

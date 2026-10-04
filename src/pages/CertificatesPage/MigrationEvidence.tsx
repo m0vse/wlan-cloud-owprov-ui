@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, AlertIcon, Box, Button, Checkbox, Heading, Input, Select, SimpleGrid, Text, VStack } from '@chakra-ui/react';
 import { useMutation } from '@tanstack/react-query';
-import { axiosProv } from 'utils/axiosInstances';
+import { axiosPki as axiosProv } from 'utils/pkiClient';
 
 type RecordRow = { version: number; actor: string; approved: number; identity?: string; record: Record<string, string | string[]> };
 type Evidence = { hardware: RecordRow | null; qualifications: RecordRow[]; runtimes: RecordRow[] };

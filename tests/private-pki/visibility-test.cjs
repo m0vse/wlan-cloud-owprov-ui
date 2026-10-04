@@ -25,7 +25,7 @@ function load(relative) {
     if (name === '@chakra-ui/react') return chakra;
     if (name === 'contexts/AuthProvider') return { useAuth: () => ({ user: role ? { userRole: role } : undefined }) };
     if (name === 'react-i18next') return { useTranslation: () => ({ t: (value) => value }) };
-    if (name === 'utils/axiosInstances') return { axiosProv: { get: () => { requests++; throw Error('unexpected request'); }, post: () => { requests++; throw Error('unexpected mutation'); } } };
+    if (name === 'utils/axiosInstances' || name === 'utils/pkiClient') return { axiosPki: { get: () => { requests++; throw Error('unexpected request'); }, post: () => { requests++; throw Error('unexpected mutation'); } } };
     if (name === '@tanstack/react-query') return {};
     return new Proxy({}, { get: (_, key) => key === '__esModule' ? true : key });
   };

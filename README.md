@@ -2,7 +2,10 @@
 # Private AP certificate lifecycle
 
 The visible root-only **System → AP certificates** page is deployed as a UI-only
-addition. Its certificate lifecycle backend remains inactive. The page uses the existing provisioning login/token
+addition. Its admin-only backend is connected for real CA status, retained public
+AP certificate observations, audit and Root-reviewed qualification evidence.
+Enrollment, renewal, revocation and retirement remain unavailable while controller
+service-account permissions and AP activation are integrated. The page uses the existing provisioning login/token
 and new `pki/status`, `pki/audit` and `pki/authorize` backend contracts. The
 navigation entry uses the same Root account role as the existing portal menus;
 its visibility does not depend on a separate runtime feature flag. Backend OWSEC root
@@ -14,7 +17,9 @@ memory, expires from view and is never written to browser storage. Live actions
 remain unavailable until the backend reports real gateway enforcement.
 
 The issuer foundation is in the owned deployment repository's `private-pki/`.
-It is isolated-tested, not production deployed. Gateway admission/session
+Only its admin-only portal adapter is production deployed. PKI requests use the
+portal origin and reuse the existing authenticated provisioning client; no human
+token is copied to persistent server storage. Gateway admission/session
 revocation, fresh candidate management acceptance, AP activation/rollback,
 renewal orchestration and fleet root retirement remain integration work. A
 certificate shown as **Issued** is not proof of gateway acceptance or migration.
