@@ -33,8 +33,8 @@ const CertificatesPage = () => {
     retry: false,
   });
   const gateway = useQuery(['pki-ap-status', serial], () =>
-    axiosGw.get<{ lastContact: number; connected: boolean }>(`device/${serial}`).then(({ data }) => data).catch((error) => {
-      if (error.response?.status === 404) return { lastContact: 0, connected: false };
+    axiosGw.get<{ lastRecordedContact: number; certificateExpiryDate: number }>(`device/${serial}`).then(({ data }) => data).catch((error) => {
+      if (error.response?.status === 404) return { lastRecordedContact: 0, certificateExpiryDate: 0 };
       throw error;
     }), { enabled: !!serial, retry: false });
   const audit = useQuery(['pki-audit'], () => axiosPki.get<{ events: Audit[] }>('pki/audit').then(({ data }) => data.events), {
@@ -50,7 +50,7 @@ const CertificatesPage = () => {
   const date = (stamp: number) => new Date(stamp * 1000).toLocaleString();
   const jobs = status.data?.onboarding || [];
   const knownCertificate = status.data?.certificates.some((cert) => cert.device === serial);
-  const existing = !!knownCertificate || !!gateway.data?.connected || (gateway.data?.lastContact || 0) > 0;
+  const existing = !!knownCertificate || (gateway.data?.lastRecordedContact || 0) > 0 || (gateway.data?.certificateExpiryDate || 0) > 0;
   const migrated = status.data?.certificates.some((cert) => cert.device === serial && !cert.observed && !cert.revoked && !!cert.managementAcceptedAt && cert.expires * 1000 > Date.now());
   const action = migrated ? 'Renew certificate' : existing ? 'Move to new CA' : 'Onboard';
   const active = jobs.some((job) => job.serial === serial && ['waiting', 'running'].includes(job.state));
