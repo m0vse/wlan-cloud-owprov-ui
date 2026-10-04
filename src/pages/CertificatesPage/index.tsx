@@ -13,7 +13,7 @@ import ImportDeviceCsvModal from 'components/Tables/InventoryTable/ImportDeviceC
 type Job = { id: string; serial: string; state: string; message: string; kind?: string };
 type Certificate = {
   fingerprint: string; issuer: string; device: string; expires: number; revoked: number;
-  observed?: boolean; nativeConnected?: boolean; nativeError?: string;
+  observed?: boolean; nativeConnected?: boolean; superseded?: boolean; canDelete?: boolean; nativeError?: string;
 };
 type EnrollmentBatch = { id: string; active: number; devices: number; enrolled: number; operation: string };
 type EnrollmentKey = { id: string; enrollmentKey: string; server: string; devices: number };
@@ -57,6 +57,9 @@ const CertificatesPage = () => {
   const createEnrollmentKey = useMutation(() => axiosPki.post<EnrollmentKey>('pki/create-enrollment-key', {
     serials: [...new Set(batchSerials.toLowerCase().split(/[\s,;]+/).filter(Boolean))], operation: batchOperation,
   }).then(({ data }) => data), { onSuccess: (data) => { setEnrollmentKey(data); refresh(); } });
+  const deleteCertificate = useMutation((fingerprint: string) => axiosPki.post('pki/delete-certificate', { fingerprint }), {
+    onSuccess: refresh,
+  });
   const cancelEnrollmentKey = useMutation((id: string) => axiosPki.post('pki/cancel-enrollment-key', { id }), {
     onSuccess: () => { setEnrollmentKey(undefined); refresh(); },
   });
@@ -117,11 +120,12 @@ const CertificatesPage = () => {
         </HStack>)}
       </Box>}
       <Box overflowX="auto"><Heading size="md" mb={3}>AP certificates</Heading>
-        <Table size="sm"><Thead><Tr><Th>AP</Th><Th>Certificate reference</Th><Th>Expires</Th><Th>Status</Th></Tr></Thead>
+        {deleteCertificate.isError && <Text color="red.500" mb={2}>{(deleteCertificate.error as any)?.response?.data?.error || 'Certificate could not be deleted. Refresh and try again.'}</Text>}
+        <Table size="sm"><Thead><Tr><Th>AP</Th><Th>Certificate reference</Th><Th>Expires</Th><Th>Status</Th><Th>Actions</Th></Tr></Thead>
           <Tbody>{status.data?.certificates.map((cert) => <Tr key={cert.fingerprint}>
             <Td>{cert.device}</Td><Td><Text fontFamily="mono" fontSize="xs" maxW="360px" overflowWrap="anywhere" title="SHA-256 certificate fingerprint">{cert.fingerprint}</Text></Td><Td>{date(cert.expires)}</Td><Td>
-              {cert.revoked ? 'Revoked' : cert.expires * 1000 <= Date.now() ? 'Expired' : cert.observed ? 'Existing certificate' : cert.nativeError ? 'Review required' : cert.nativeConnected ? 'Connected with this certificate' : 'Awaiting connection'}
-            </Td></Tr>)}</Tbody>
+              {cert.revoked ? 'Revoked' : cert.expires * 1000 <= Date.now() ? 'Expired' : cert.observed ? 'Existing certificate' : cert.nativeError ? 'Review required' : cert.nativeConnected ? 'Connected with this certificate' : cert.superseded ? 'Replaced' : 'Awaiting connection'}
+            </Td><Td>{cert.canDelete && <Button size="sm" colorScheme="red" variant="outline" isLoading={deleteCertificate.isLoading} onClick={() => deleteCertificate.mutate(cert.fingerprint)}>Delete unused</Button>}</Td></Tr>)}</Tbody>
         </Table>
       </Box>
       <Accordion allowMultiple><AccordionItem>
