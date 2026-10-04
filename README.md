@@ -19,8 +19,10 @@ revocation, fresh candidate management acceptance, AP activation/rollback,
 renewal orchestration and fleet root retirement remain integration work. A
 certificate shown as **Issued** is not proof of gateway acceptance or migration.
 
-Runtime configuration is generated portably and JSON-escaped. Direct portal
-links use SPA fallback; missing `/api/` paths and asset files still return 404.
+Runtime configuration is generated portably and JSON-escaped. The portal uses
+hash routing: open `/#/certificates` on the portal origin for direct certificate
+page access. Opening `/certificates` without the hash loads the Inventory route.
+Missing `/api/` paths and asset files still return 404.
 Both navigation and direct certificate page access require root role; the backend
 must independently validate OWSEC authorization when deployed.
 
