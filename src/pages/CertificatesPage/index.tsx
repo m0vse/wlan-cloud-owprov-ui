@@ -25,12 +25,24 @@ type Status = {
   activeRoot: string;
 };
 type Audit = { stamp: number; actor: string; action: string; target: string };
+type RetirementReview = {
+  retainedRoot: string;
+  ready: boolean;
+  provisioningCount: number;
+  gatewayCount: number;
+  accepted: string[];
+  explicitlyRetired: string[];
+  blockers: { serial: string; reason: string }[];
+};
 
 const CertificatesPage = () => {
   const queries = useQueryClient();
   const [serial, setSerial] = useState('');
   const [csr, setCsr] = useState('');
   const [operation, setOperation] = useState('production-stock-openwrt-migration');
+  const retirement = useMutation(
+    (root: string) => axiosProv.post<RetirementReview>('pki/retirement-review', { root }).then(({ data }) => data),
+  );
   const identity = useMutation(
     () => axiosProv.post('pki/approve-identity', { serial, approved: true, enabled: true, retired: false }),
     { onSuccess: () => queries.invalidateQueries(['pki-audit']) },
@@ -63,11 +75,18 @@ const CertificatesPage = () => {
       {status.data && !ready && <Alert status="warning"><AlertIcon />Gateway enforcement is pending. Live enrollment, revocation and CA retirement are unavailable.</Alert>}
       {status.data && (
         <Box>
-          {status.data.roots.map((root) => <Text key={root.fingerprint}>{root.name} — expires {date(root.expires)} {root.fingerprint === status.data?.activeRoot ? '(active)' : '(retained)'}</Text>)}
+          {status.data.roots.map((root) => <HStack key={root.fingerprint} flexWrap="wrap"><Text>{root.name} — expires {date(root.expires)} {root.fingerprint === status.data?.activeRoot ? '(active)' : '(retained)'}</Text>{root.fingerprint !== status.data?.activeRoot && <Button size="sm" isLoading={retirement.isLoading} onClick={() => retirement.mutate(root.fingerprint)}>Review retirement readiness</Button>}</HStack>)}
           <Text>Active issuing CA: {status.data.activeIssuer}</Text>
           <Text>Retained issuing CAs: {status.data.issuers.length}. Keep existing trust until every AP has migrated.</Text>
         </Box>
       )}
+      {retirement.isError && <Alert status="error"><AlertIcon />Complete fleet verification is unavailable. Existing CA trust must remain.</Alert>}
+      {retirement.data && <Box>
+        <Heading size="sm">Retained CA readiness review</Heading>
+        <Text>{retirement.data.provisioningCount} provisioning records; {retirement.data.gatewayCount} gateway records; {retirement.data.accepted.length} verified renewals; {retirement.data.explicitlyRetired.length} individually retired APs.</Text>
+        <Text>{retirement.data.ready ? 'Current review has no blockers. Trust removal still requires the protected deployment procedure.' : 'Existing CA trust must remain until all blockers are resolved.'}</Text>
+        {retirement.data.blockers.map((blocker) => <Text key={blocker.serial}>{blocker.serial}: {blocker.reason}</Text>)}
+      </Box>}
       <Box overflowX="auto">
         <Table size="sm">
           <Thead><Tr><Th>AP serial</Th><Th>Certificate</Th><Th>Expires</Th><Th>Status</Th><Th>Issuing CA</Th><Th>Management verification</Th></Tr></Thead>
