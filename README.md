@@ -1,7 +1,8 @@
 # ow-prov
-# Private AP certificate lifecycle (source only)
+# Private AP certificate lifecycle
 
-The root-only `/certificates` page uses the existing provisioning login/token
+The visible root-only **System → AP certificates** page is deployed as a UI-only
+addition. Its certificate lifecycle backend remains inactive. The page uses the existing provisioning login/token
 and new `pki/status`, `pki/audit` and `pki/authorize` backend contracts. The
 navigation entry is disabled unless `REACT_APP_PRIVATE_PKI_ENABLED=true` is
 supplied through the normal private runtime configuration. Backend OWSEC root
@@ -17,3 +18,13 @@ It is isolated-tested, not production deployed. Gateway admission/session
 revocation, fresh candidate management acceptance, AP activation/rollback,
 renewal orchestration and fleet root retirement remain integration work. A
 certificate shown as **Issued** is not proof of gateway acceptance or migration.
+
+Runtime configuration is generated portably and JSON-escaped. Direct portal
+links use SPA fallback; missing `/api/` paths and asset files still return 404.
+Both navigation and direct certificate page access require root role; the backend
+must independently validate OWSEC authorization when deployed.
+
+Run `node tests/private-pki/visibility-test.cjs` with installed portal dependencies
+for the 18 flag/role guard checks. The deployed image layers the certificate page
+on the existing live resource/copy UI; six live source differences are preserved
+and recorded in a private deployment manifest, not silently overwritten.

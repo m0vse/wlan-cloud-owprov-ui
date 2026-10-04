@@ -6,6 +6,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { axiosProv } from 'utils/axiosInstances';
 import MigrationEvidence from './MigrationEvidence';
+import { useAuth } from 'contexts/AuthProvider';
 
 type Certificate = {
   fingerprint: string;
@@ -71,7 +72,7 @@ const CertificatesPage = () => {
         <Heading size="lg">AP certificates</Heading>
         <Button onClick={() => { status.refetch(); audit.refetch(); }} isLoading={status.isFetching}>Refresh</Button>
       </HStack>
-      {status.isError && <Alert status="error"><AlertIcon />Certificate service unavailable or access refused.</Alert>}
+      {status.isError && <Alert status="warning"><AlertIcon />Certificate management service is not yet available. Enrollment, revocation and CA retirement controls are inactive.</Alert>}
       {status.data && !ready && <Alert status="warning"><AlertIcon />Gateway enforcement is pending. Live enrollment, revocation and CA retirement are unavailable.</Alert>}
       {status.data && (
         <Box>
@@ -104,7 +105,7 @@ const CertificatesPage = () => {
         </Table>
       </Box>
       {status.data?.certificates.length === 0 && <Text>No certificates have been issued by this service.</Text>}
-      <MigrationEvidence />
+      {status.data && <MigrationEvidence />}
       <Box>
         <Heading size="md" mb={3}>Authorize installation or recovery</Heading>
         <Text mb={3}>Use a certificate request generated on the AP. Authorization is bound to its serial and key and lasts ten minutes.</Text>
@@ -135,4 +136,11 @@ const CertificatesPage = () => {
   );
 };
 
-export default CertificatesPage;
+const CertificatesRoute = () => {
+  const { user } = useAuth();
+  const enabled = (window as Window & { _env_?: { REACT_APP_PRIVATE_PKI_ENABLED?: string } })._env_?.REACT_APP_PRIVATE_PKI_ENABLED === 'true';
+  if (!enabled || user?.userRole !== 'root') return <Alert status="warning"><AlertIcon />Root access is required for AP certificate management.</Alert>;
+  return <CertificatesPage />;
+};
+
+export default CertificatesRoute;
