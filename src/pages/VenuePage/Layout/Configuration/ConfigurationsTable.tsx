@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import ConfigurationsTable from 'components/Tables/ConfigurationTable';
 import DeleteConfigurationButton from 'components/Tables/ConfigurationTable/DeleteConfigurationButton';
+import ObjectTransfer from 'components/Modals/ObjectTransfer';
 import { useGetVenue } from 'hooks/Network/Venues';
 import { Configuration } from 'models/Configuration';
 
@@ -23,6 +24,7 @@ const VenueConfigurationsTable = ({ id }: Props) => {
     (cell: { row: { original: Configuration } }) => (
       <HStack spacing={2}>
         <DeleteConfigurationButton configuration={cell.row.original} />
+        <ObjectTransfer kind="configuration" object={cell.row.original} refresh={getVenue.refetch} isCompact />
         <Tooltip hasArrow label={t('common.view_details')} placement="top">
           <IconButton
             aria-label={t('common.view_details')}
@@ -34,7 +36,7 @@ const VenueConfigurationsTable = ({ id }: Props) => {
         </Tooltip>
       </HStack>
     ),
-    [t],
+    [t, getVenue.refetch],
   );
 
   return (

@@ -65,7 +65,7 @@ const ConfigurationsTable = ({ select, actions }) => {
         Header: '',
         Footer: '',
         accessor: 'Id',
-        customWidth: '80px',
+        customWidth: '180px',
         Cell: ({ cell }) => actions(cell),
         disableSortBy: true,
         alwaysShow: true,
@@ -73,7 +73,7 @@ const ConfigurationsTable = ({ select, actions }) => {
     ];
 
     return baseColumns;
-  }, [t]);
+  }, [t, actions]);
 
   return (
     <DataTable

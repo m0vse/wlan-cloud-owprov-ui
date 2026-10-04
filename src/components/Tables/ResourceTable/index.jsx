@@ -69,7 +69,7 @@ const ResourcesTable = ({ select, actions, openDetailsModal }) => {
         Header: '',
         Footer: '',
         accessor: 'id',
-        customWidth: '80px',
+        customWidth: '180px',
         Cell: ({ cell }) => actions(cell),
         disableSortBy: true,
         alwaysShow: true,
@@ -77,7 +77,7 @@ const ResourcesTable = ({ select, actions, openDetailsModal }) => {
     ];
 
     return baseColumns;
-  }, [t]);
+  }, [t, actions]);
 
   return (
     <DataTable

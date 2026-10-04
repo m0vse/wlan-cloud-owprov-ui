@@ -7,6 +7,7 @@ import CardBody from 'components/Card/CardBody';
 import ConfigurationsTable from 'components/Tables/ConfigurationTable';
 import CreateConfigurationModal from 'components/Tables/ConfigurationTable/CreateConfigurationModal';
 import DeleteConfigurationButton from 'components/Tables/ConfigurationTable/DeleteConfigurationButton';
+import ObjectTransfer from 'components/Modals/ObjectTransfer';
 import { useGetEntity } from 'hooks/Network/Entity';
 import { Configuration } from 'models/Configuration';
 
@@ -25,6 +26,7 @@ const EntityConfigurations = ({ id }: Props) => {
     (cell: { row: { original: Configuration } }) => (
       <HStack spacing={2}>
         <DeleteConfigurationButton configuration={cell.row.original} />
+        <ObjectTransfer kind="configuration" object={cell.row.original} refresh={getEntity.refetch} isCompact />
         <Tooltip hasArrow label={t('common.view_details')} placement="top">
           <IconButton
             aria-label={t('common.view_details')}
@@ -36,7 +38,7 @@ const EntityConfigurations = ({ id }: Props) => {
         </Tooltip>
       </HStack>
     ),
-    [t],
+    [t, getEntity.refetch],
   );
 
   return (

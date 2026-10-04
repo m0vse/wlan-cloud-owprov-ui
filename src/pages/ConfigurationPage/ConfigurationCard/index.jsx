@@ -13,6 +13,7 @@ import EditConfigurationForm from './Form';
 import RefreshButton from 'components/Buttons/RefreshButton';
 import SaveButton from 'components/Buttons/SaveButton';
 import ToggleEditButton from 'components/Buttons/ToggleEditButton';
+import ObjectTransfer from 'components/Modals/ObjectTransfer';
 import Card from 'components/Card';
 import CardBody from 'components/Card/CardBody';
 import CardHeader from 'components/Card/CardHeader';
@@ -147,6 +148,14 @@ const ConfigurationCard = ({ id }) => {
           </Box>
           <Spacer />
           <Box>
+            {configuration && (
+              <ObjectTransfer
+                kind="configuration"
+                object={configuration}
+                refresh={refetch}
+                isDisabled={editing || isFetching}
+              />
+            )}
             <SaveButton
               onClick={handleSubmitClick}
               isLoading={updateEntity.isLoading}

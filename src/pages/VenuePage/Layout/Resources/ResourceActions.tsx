@@ -23,6 +23,7 @@ import { v4 as uuid } from 'uuid';
 import { useDeleteResource } from 'hooks/Network/Resources';
 import { AxiosError } from 'models/Axios';
 import { Resource } from 'models/Resource';
+import ObjectTransfer from 'components/Modals/ObjectTransfer';
 
 type Props = {
   resource: Resource;
@@ -72,6 +73,7 @@ const EntityResourceActions = ({ resource, refreshTable, openEditModal }: Props)
 
   return (
     <Flex>
+      <ObjectTransfer kind="resource" object={resource} refresh={refreshTable} isCompact />
       <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose}>
         <Tooltip hasArrow label={t('crud.delete')} placement="top" isDisabled={isOpen}>
           <Box>

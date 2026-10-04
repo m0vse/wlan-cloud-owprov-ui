@@ -8,6 +8,7 @@ RUN node test-bulk-push.cjs
 RUN node test-radio-enable.cjs
 RUN node test-6ghz-power-mode.cjs
 RUN node test-auth-protocol.cjs
+RUN node test-object-transfer.cjs
 RUN npm run build
 
 FROM openwifi-owprov-ui:shinesystems-20260930 AS runtime

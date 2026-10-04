@@ -27,6 +27,7 @@ import { useGetRadiusEndpoints } from 'hooks/Network/RadiusEndpoints';
 import { useGetResource } from 'hooks/Network/Resources';
 import useFormRef from 'hooks/useFormRef';
 import { Resource } from 'models/Resource';
+import ObjectTransfer from 'components/Modals/ObjectTransfer';
 
 interface Props {
   isOpen: boolean;
@@ -189,6 +190,14 @@ const EditResourceModal: React.FC<Props> = ({ isOpen, onClose, resource, refresh
           title={t('crud.edit_obj', { obj: t('resources.configuration_resource') })}
           right={
             <>
+              {resource && (
+                <ObjectTransfer
+                  kind="resource"
+                  object={resource}
+                  refresh={refreshAll}
+                  isDisabled={editing || isLoading}
+                />
+              )}
               <SaveButton
                 onClick={form.submitForm}
                 isLoading={form.isSubmitting}

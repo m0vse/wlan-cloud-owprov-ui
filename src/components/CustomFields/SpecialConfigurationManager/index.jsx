@@ -5,6 +5,7 @@ import isEqual from 'react-fast-compare';
 import { useTranslation } from 'react-i18next';
 import SpecialConfigurationForm from './SpecialConfigurationForm';
 import DeleteButton from 'components/Buttons/DeleteButton';
+import ObjectTransfer from 'components/Modals/ObjectTransfer';
 import { BASE_SECTIONS } from 'constants/configuration';
 import { useGetConfiguration } from 'hooks/Network/Configurations';
 import ConfigurationSectionsCard from 'pages/ConfigurationPage/ConfigurationCard/ConfigurationSectionsCard';
@@ -76,7 +77,7 @@ const SpecialConfigurationManager = ({
     },
     [form],
   );
-  const { data: configuration } = useGetConfiguration({ id: configId });
+  const { data: configuration, refetch, isFetching } = useGetConfiguration({ id: configId });
 
   const handleCreateClick = useCallback(() => {
     setSections(BASE_SECTIONS);
@@ -124,6 +125,7 @@ const SpecialConfigurationManager = ({
           <Heading display="flex" size="md" mb={2}>
             {t('common.base_information')}
             <Spacer />
+            {configuration && <ObjectTransfer kind="configuration" object={configuration} refresh={refetch} isDisabled={editing || isFetching} isCompact />}
             <DeleteButton onClick={handleDeleteClick} isDisabled={!editing} />
           </Heading>
           <SpecialConfigurationForm editing={editing} formRef={formRef} configuration={configuration} />
