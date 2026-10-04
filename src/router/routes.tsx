@@ -4,6 +4,7 @@ import EntityNavigationButton from 'layout/Sidebar/EntityNavigationButton';
 import { Route } from 'models/Routes';
 
 const ConfigurationPage = React.lazy(() => import('pages/ConfigurationPage'));
+const CertificatesPage = React.lazy(() => import('pages/CertificatesPage'));
 const EntityPage = React.lazy(() => import('pages/EntityPage'));
 const InventoryPage = React.lazy(() => import('pages/InventoryPage'));
 const OpenRoamingPage = React.lazy(() => import('pages/OpenRoamingPage'));
@@ -117,6 +118,16 @@ const routes: Route[] = [
     name: 'system.title',
     icon: () => <Info size={28} weight="bold" />,
     children: [
+      {
+        id: 'system-certificates',
+        authorized: ['root'],
+        path: '/certificates',
+        name: 'RAW-AP certificates',
+        label: 'AP certificates',
+        navName: () => 'AP certificates',
+        hidden: (window as Window & { _env_?: { REACT_APP_PRIVATE_PKI_ENABLED?: string } })._env_?.REACT_APP_PRIVATE_PKI_ENABLED !== 'true',
+        component: CertificatesPage,
+      },
       {
         id: 'system-configuration',
         authorized: ['root', 'partner', 'admin', 'csr', 'system'],
