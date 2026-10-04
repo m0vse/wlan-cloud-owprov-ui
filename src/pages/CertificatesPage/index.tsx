@@ -1,142 +1,98 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  Alert, AlertIcon, Badge, Box, Button, Heading, HStack, Input, Select,
-  Table, Tbody, Td, Text, Textarea, Th, Thead, Tr, VStack,
+  Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel,
+  Alert, AlertIcon, Badge, Box, Button, Heading, HStack, Select,
+  Table, Tbody, Td, Text, Th, Thead, Tr, VStack,
 } from '@chakra-ui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { axiosPki as axiosProv } from 'utils/pkiClient';
-import MigrationEvidence from './MigrationEvidence';
+import { axiosProv } from 'utils/axiosInstances';
+import { axiosPki } from 'utils/pkiClient';
 import { useAuth } from 'contexts/AuthProvider';
 
+type Job = { id: string; serial: string; state: string; message: string };
 type Certificate = {
-  fingerprint: string;
-  device: string;
-  issuer: string;
-  expires: number;
-  revoked: number;
-  managementAcceptedAt?: number;
-  issuanceKind?: string;
-  observed?: boolean;
+  fingerprint: string; device: string; expires: number; revoked: number;
+  observed?: boolean; managementAcceptedAt?: number;
 };
 type Status = {
   certificates: Certificate[];
-  issuers: string[];
-  activeIssuer: string;
-  preparedIssuer?: string;
-  phase?: string;
-  setup?: { state: string; message: string };
-  gatewayEnforcement: string;
   roots: { fingerprint: string; name: string; expires: number; state?: string }[];
-  activeRoot: string;
+  gatewayEnforcement: string; onboarding: Job[];
 };
+type Inventory = { serialNumber: string; name?: string; deviceType?: string };
 type Audit = { stamp: number; actor: string; action: string; target: string };
-type RetirementReview = {
-  retainedRoot: string;
-  ready: boolean;
-  provisioningCount: number;
-  gatewayCount: number;
-  accepted: string[];
-  explicitlyRetired: string[];
-  blockers: { serial: string; reason: string }[];
-};
 
 const CertificatesPage = () => {
   const queries = useQueryClient();
   const [serial, setSerial] = useState('');
-  const [csr, setCsr] = useState('');
-  const [operation, setOperation] = useState('production-stock-openwrt-migration');
-  const retirement = useMutation(
-    (root: string) => axiosProv.post<RetirementReview>('pki/retirement-review', { root }).then(({ data }) => data),
-  );
-  const identity = useMutation(
-    () => axiosProv.post('pki/approve-identity', { serial, approved: true, enabled: true, retired: false }),
-    { onSuccess: () => queries.invalidateQueries(['pki-audit']) },
-  );
-  const status = useQuery(['pki-status'], () => axiosProv.get<Status>('pki/status').then(({ data }) => data), {
+  const status = useQuery(['pki-status'], () => axiosPki.get<Status>('pki/status').then(({ data }) => data), {
+    retry: false, refetchInterval: (data) => data?.onboarding?.some((job) => ['waiting', 'running'].includes(job.state)) ? 10000 : false,
+  });
+  const inventory = useQuery(['pki-onboarding-inventory'], () =>
+    axiosProv.get<{ taglist: Inventory[] }>('inventory?offset=0&limit=1000').then(({ data }) => data.taglist), {
     retry: false,
   });
-  const audit = useQuery(['pki-audit'], () => axiosProv.get<{ events: Audit[] }>('pki/audit').then(({ data }) => data.events), {
+  const audit = useQuery(['pki-audit'], () => axiosPki.get<{ events: Audit[] }>('pki/audit').then(({ data }) => data.events), {
     retry: false,
   });
-  const enroll = useMutation(
-    () => axiosProv.post<{ authorization: string; expiresIn: number; serial: string }>('pki/authorize', { serial, csr, operation }).then(({ data }) => data),
-    { onSuccess: () => queries.invalidateQueries(['pki-audit']) },
-  );
-  useEffect(() => {
-    if (!enroll.data) return undefined;
-    const timer = window.setTimeout(() => enroll.reset(), enroll.data.expiresIn * 1000);
-    return () => window.clearTimeout(timer);
-  }, [enroll.data, enroll.reset]);
+  const refresh = () => { status.refetch(); audit.refetch(); };
+  const onboard = useMutation(() => axiosPki.post<Job>('pki/onboard', { serial }).then(({ data }) => data), {
+    onSuccess: () => { queries.invalidateQueries(['pki-status']); queries.invalidateQueries(['pki-audit']); },
+  });
+  const cancel = useMutation((job: string) => axiosPki.post<Job>('pki/cancel-onboarding', { job }).then(({ data }) => data), {
+    onSuccess: () => { queries.invalidateQueries(['pki-status']); queries.invalidateQueries(['pki-audit']); },
+  });
   const date = (stamp: number) => new Date(stamp * 1000).toLocaleString();
-  const ready = status.data?.gatewayEnforcement === 'enforced';
+  const jobs = status.data?.onboarding || [];
+  const active = jobs.some((job) => job.serial === serial && ['waiting', 'running'].includes(job.state));
 
   return (
     <VStack align="stretch" spacing={5}>
-      <HStack justify="space-between">
-        <Heading size="lg">AP certificates</Heading>
-        <Button onClick={() => { status.refetch(); audit.refetch(); }} isLoading={status.isFetching}>Refresh</Button>
+      <HStack justify="space-between"><Heading size="lg">AP onboarding</Heading>
+        <Button onClick={refresh} isLoading={status.isFetching}>Refresh</Button></HStack>
+      <Text>Select an AP and click Onboard. Certificates and verification are handled automatically. Your approval stays valid until onboarding completes or you cancel it.</Text>
+      {status.isError && <Alert status="warning"><AlertIcon />Onboarding service is unavailable. Existing APs continue using their current certificates.</Alert>}
+      {status.data && status.data.gatewayEnforcement !== 'enforced' && <Alert status="info"><AlertIcon />Controller integration is still in progress. Onboarding requests will wait until it is ready.</Alert>}
+      {inventory.isError && <Alert status="error"><AlertIcon />The AP inventory could not be loaded.</Alert>}
+      <HStack align="start" flexWrap="wrap">
+        <Select aria-label="AP to onboard" placeholder={inventory.isLoading ? 'Loading APs…' : 'Select an AP'}
+          maxW="500px" value={serial} onChange={(event) => { setSerial(event.target.value); onboard.reset(); }}>
+          {inventory.data?.map((ap) => <option key={ap.serialNumber} value={ap.serialNumber}>
+            {ap.name || ap.deviceType || 'AP'} — {ap.serialNumber}
+          </option>)}
+        </Select>
+        <Button colorScheme="blue" isDisabled={!status.data || !serial || active} isLoading={onboard.isLoading}
+          onClick={() => onboard.mutate()}>Onboard</Button>
       </HStack>
-      {status.isError && <Alert status="warning"><AlertIcon />Certificate management service is not yet available. Enrollment, revocation and CA retirement controls are inactive.</Alert>}
-      {status.data && !ready && <Alert status="warning"><AlertIcon />Gateway enforcement is pending. Live enrollment, revocation and CA retirement are unavailable.</Alert>}
-      {status.data && (
-        <Box>
-          {status.data.roots.map((root) => <HStack key={root.fingerprint} flexWrap="wrap"><Text>{root.name} — expires {date(root.expires)} ({root.state || (root.fingerprint === status.data?.activeRoot ? 'active' : 'retained')})</Text>{root.state !== 'prepared' && root.fingerprint !== status.data?.activeRoot && <Button size="sm" isLoading={retirement.isLoading} onClick={() => retirement.mutate(root.fingerprint)}>Review retirement readiness</Button>}</HStack>)}
-          <Text>{status.data.preparedIssuer ? `Prepared issuing CA: ${status.data.preparedIssuer}` : `Active issuing CA: ${status.data.activeIssuer}`}</Text>
-          {status.data.setup && <Text>{status.data.setup.message}</Text>}
-          <Text>Retained issuing CAs: {status.data.issuers.length}. Keep existing trust until every AP has migrated.</Text>
-        </Box>
-      )}
-      {retirement.isError && <Alert status="error"><AlertIcon />Complete fleet verification is unavailable. Existing CA trust must remain.</Alert>}
-      {retirement.data && <Box>
-        <Heading size="sm">Retained CA readiness review</Heading>
-        <Text>{retirement.data.provisioningCount} provisioning records; {retirement.data.gatewayCount} gateway records; {retirement.data.accepted.length} verified renewals; {retirement.data.explicitlyRetired.length} individually retired APs.</Text>
-        <Text>{retirement.data.ready ? 'Current review has no blockers. Trust removal still requires the protected deployment procedure.' : 'Existing CA trust must remain until all blockers are resolved.'}</Text>
-        {retirement.data.blockers.map((blocker) => <Text key={blocker.serial}>{blocker.serial}: {blocker.reason}</Text>)}
+      {onboard.isError && <Alert status="error"><AlertIcon />Onboarding could not be requested. Check that the AP is assigned to its current owner.</Alert>}
+      {onboard.data && <Text>{onboard.data.message}</Text>}
+      {cancel.isError && <Alert status="error"><AlertIcon />The request could not be cancelled. Its current state has been preserved.</Alert>}
+      {jobs.length > 0 && <Box><Heading size="md" mb={3}>Onboarding progress</Heading>
+        {jobs.map((job) => <HStack key={job.id} mb={2} flexWrap="wrap">
+          <Text>{job.serial}</Text><Badge>{job.state}</Badge><Text>{job.message}</Text>
+          {job.state === 'waiting' && <Button size="sm" isLoading={cancel.isLoading} onClick={() => cancel.mutate(job.id)}>Cancel</Button>}
+        </HStack>)}
       </Box>}
-      <Box overflowX="auto">
-        <Table size="sm">
-          <Thead><Tr><Th>AP serial</Th><Th>Certificate</Th><Th>Expires</Th><Th>Status</Th><Th>Issuing CA</Th><Th>Management verification</Th></Tr></Thead>
-          <Tbody>{status.data?.certificates.map((cert) => (
-            <Tr key={cert.fingerprint}>
-              <Td>{cert.device}</Td><Td title={cert.fingerprint}>{cert.fingerprint.slice(0, 16)}…</Td>
-              <Td>{date(cert.expires)}</Td>
-              <Td><Badge colorScheme={cert.revoked || cert.expires * 1000 <= Date.now() ? 'red' : 'green'}>
-                {cert.revoked ? 'Revoked' : cert.expires * 1000 <= Date.now() ? 'Expired' : cert.observed ? 'Retained certificate' : 'Issued'}
-              </Badge></Td>
-              <Td title={cert.issuer}>{cert.issuer.slice(0, 16)}…</Td>
-              <Td>{cert.managementAcceptedAt ? `${date(cert.managementAcceptedAt)} (${cert.issuanceKind || 'unclassified'})` : cert.observed ? 'Observed public certificate; migration not verified' : 'Pending'}</Td>
-            </Tr>
-          ))}</Tbody>
+      <Box overflowX="auto"><Heading size="md" mb={3}>AP certificates</Heading>
+        <Table size="sm"><Thead><Tr><Th>AP</Th><Th>Expires</Th><Th>Status</Th></Tr></Thead>
+          <Tbody>{status.data?.certificates.map((cert) => <Tr key={cert.fingerprint}>
+            <Td>{cert.device}</Td><Td>{date(cert.expires)}</Td><Td>
+              {cert.revoked ? 'Revoked' : cert.expires * 1000 <= Date.now() ? 'Expired' : cert.observed ? 'Existing certificate' : cert.managementAcceptedAt ? 'Verified' : 'Verification pending'}
+            </Td></Tr>)}</Tbody>
         </Table>
       </Box>
-      {status.data?.certificates.length === 0 && <Text>No certificates have been issued by this service.</Text>}
-      {status.data && <MigrationEvidence />}
-      <Box>
-        <Heading size="md" mb={3}>Authorize installation or recovery</Heading>
-        <Text mb={3}>Use a certificate request generated on the AP. Authorization is bound to its serial and key and lasts ten minutes.</Text>
-        <VStack align="stretch">
-          <Input aria-label="AP serial" placeholder="AP serial" value={serial} onChange={(event) => { setSerial(event.target.value); enroll.reset(); }} />
-          <Text>Approve the current AP inventory and ownership before enrollment. A change of ownership requires another review.</Text>
-          <Button alignSelf="start" isDisabled={!ready || !/^[0-9a-f]{12}$/.test(serial)} isLoading={identity.isLoading} onClick={() => identity.mutate()}>Approve this AP identity</Button>
-          {identity.isError && <Alert status="error"><AlertIcon />Identity approval refused. Check inventory and ownership.</Alert>}
-          {identity.isSuccess && <Text>Identity approval recorded.</Text>}
-          <Select aria-label="Migration path" value={operation} onChange={(event) => { setOperation(event.target.value); enroll.reset(); }}>
-            <option value="production-stock-openwrt-migration">OpenWrt to OpenWiFi</option>
-            <option value="production-oem-migration">OEM to OpenWiFi</option>
-          </Select>
-          <Textarea aria-label="AP certificate request" placeholder="AP certificate request (PEM)" value={csr} onChange={(event) => { setCsr(event.target.value); enroll.reset(); }} />
-          <Button alignSelf="start" isDisabled={!ready || !/^[0-9a-f]{12}$/.test(serial) || !csr || !!enroll.data} isLoading={enroll.isLoading} onClick={() => enroll.mutate()}>Authorize this request</Button>
-          {enroll.isError && <Alert status="error"><AlertIcon />Authorization failed. Check access, inventory and certificate request.</Alert>}
-          {enroll.data && <Box><Text>Private authorization for {enroll.data.serial}. Pass it to the installer before expiry.</Text><Text userSelect="all" fontFamily="monospace">{enroll.data.authorization}</Text><Button mt={2} onClick={() => enroll.reset()}>Dismiss authorization</Button></Box>}
-        </VStack>
-      </Box>
-      <Box overflowX="auto">
-        <Heading size="md" mb={3}>Operator audit</Heading>
-        {audit.isError && <Alert status="error"><AlertIcon />Audit records unavailable.</Alert>}
-        <Table size="sm"><Thead><Tr><Th>Time</Th><Th>Operator</Th><Th>Action</Th><Th>Target</Th></Tr></Thead>
-          <Tbody>{audit.data?.map((event, index) => <Tr key={`${event.stamp}-${index}`}><Td>{date(event.stamp)}</Td><Td>{event.actor}</Td><Td>{event.action}</Td><Td>{event.target}</Td></Tr>)}</Tbody>
-        </Table>
-      </Box>
+      <Accordion allowMultiple><AccordionItem>
+        <AccordionButton><Box flex="1" textAlign="left">CA details</Box><AccordionIcon /></AccordionButton>
+        <AccordionPanel>{status.data?.roots.map((root) => <Box key={root.fingerprint} mb={3}>
+          <Text>{root.name} ({root.state || 'retained'}) — expires {date(root.expires)}</Text>
+          <Text fontSize="sm" overflowWrap="anywhere">{root.fingerprint}</Text>
+        </Box>)}<Text>The existing CA stays trusted until every AP has migrated or been explicitly retired.</Text></AccordionPanel>
+      </AccordionItem><AccordionItem>
+        <AccordionButton><Box flex="1" textAlign="left">Activity</Box><AccordionIcon /></AccordionButton>
+        <AccordionPanel>{audit.data?.map((event, index) => <Text key={`${event.stamp}-${index}`}>
+          {date(event.stamp)} — {event.action}: {event.target}
+        </Text>)}</AccordionPanel>
+      </AccordionItem></Accordion>
     </VStack>
   );
 };

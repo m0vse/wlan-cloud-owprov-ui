@@ -35,3 +35,8 @@ Run `node tests/private-pki/visibility-test.cjs` with installed portal dependenc
 for the 18 flag/role guard checks. The deployed image layers the certificate page
 on the existing live resource/copy UI; six live source differences are preserved
 and recorded in a private deployment manifest, not silently overwritten.
+
+The normal onboarding flow is select AP → Onboard, with resumable progress and
+Cancel. Approval is durable until completion/cancellation; no operator countdown,
+CSR upload, grant copying or qualification form is exposed. The current worker
+still awaits controller/AP integration and reports that waiting state honestly.
