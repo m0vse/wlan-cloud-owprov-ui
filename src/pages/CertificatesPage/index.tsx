@@ -138,8 +138,6 @@ const CertificatesPage = () => {
 
 const CertificatesRoute = () => {
   const { user } = useAuth();
-  const enabled = (window as Window & { _env_?: { REACT_APP_PRIVATE_PKI_ENABLED?: string } })._env_?.REACT_APP_PRIVATE_PKI_ENABLED === 'true';
-  if (!enabled) return <Alert status="warning"><AlertIcon />AP certificate management is not enabled in this portal's runtime configuration.</Alert>;
   if (!user) return <Alert status="info"><AlertIcon />Waiting for the portal to load your signed-in account.</Alert>;
   if (!user.userRole) return <Alert status="warning"><AlertIcon />The portal account response has no user role. AP certificate management cannot verify access.</Alert>;
   if (user.userRole !== 'root') return <Alert status="warning"><AlertIcon />AP certificate management requires Root access. The portal reports your account role as {user.userRole}.</Alert>;

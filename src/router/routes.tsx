@@ -125,7 +125,6 @@ const routes: Route[] = [
         name: 'RAW-AP certificates',
         label: 'AP certificates',
         navName: () => 'AP certificates',
-        hidden: (window as Window & { _env_?: { REACT_APP_PRIVATE_PKI_ENABLED?: string } })._env_?.REACT_APP_PRIVATE_PKI_ENABLED !== 'true',
         component: CertificatesPage,
       },
       {

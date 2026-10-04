@@ -47,15 +47,14 @@ for (const flag of ['true', 'false', undefined]) {
     role = userRole;
     const Page = load('src/pages/CertificatesPage/index.tsx');
     const page = Page();
-    assert.strictEqual(typeof page.type === 'function', flag === 'true' && role === 'root');
-    if (flag !== 'true') assert(textOf(page).includes('runtime configuration'));
-    else if (!role) assert(textOf(page).includes('Waiting for'));
+    assert.strictEqual(typeof page.type === 'function', role === 'root');
+    if (!role) assert(textOf(page).includes('Waiting for'));
     else if (role !== 'root') assert(textOf(page).includes(`account role as ${role}`));
     const routes = load('src/router/routes.tsx');
     const group = routes.find((route) => route.id === 'system-group');
     const Nested = load('src/layout/Sidebar/NestedNavButton/index.tsx');
     const links = subLinks(Nested({ isActive: () => false, route: group }));
-    assert.strictEqual(links.includes('/certificates'), flag === 'true' && role === 'root');
+    assert.strictEqual(links.includes('/certificates'), role === 'root');
     if (['root', 'admin', 'partner'].includes(role)) assert(links.includes('/systemConfiguration'));
   }
 }

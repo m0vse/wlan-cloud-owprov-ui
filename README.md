@@ -4,8 +4,8 @@
 The visible root-only **System → AP certificates** page is deployed as a UI-only
 addition. Its certificate lifecycle backend remains inactive. The page uses the existing provisioning login/token
 and new `pki/status`, `pki/audit` and `pki/authorize` backend contracts. The
-navigation entry is disabled unless `REACT_APP_PRIVATE_PKI_ENABLED=true` is
-supplied through the normal private runtime configuration. Backend OWSEC root
+navigation entry uses the same Root account role as the existing portal menus;
+its visibility does not depend on a separate runtime feature flag. Backend OWSEC root
 authorization is mandatory; hiding navigation never grants or denies access.
 
 The page displays configured root names/fingerprints, retained trust, issued AP
