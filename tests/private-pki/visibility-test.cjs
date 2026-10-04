@@ -8,6 +8,11 @@ const root = path.resolve(__dirname, '../..');
 let role = 'root';
 let enabled = 'true';
 let requests = 0;
+function textOf(element) {
+  if (typeof element === 'string') return element;
+  if (!element || typeof element !== 'object') return '';
+  return (element.children || []).flat(Infinity).map(textOf).join('');
+}
 const react = { createElement: (type, props, ...children) => ({ type, props: props || {}, children }), lazy: () => 'LazyPage' };
 const chakra = new Proxy({ useColorModeValue: (first) => first }, { get: (target, key) => target[key] || key });
 function load(relative) {
@@ -43,6 +48,9 @@ for (const flag of ['true', 'false', undefined]) {
     const Page = load('src/pages/CertificatesPage/index.tsx');
     const page = Page();
     assert.strictEqual(typeof page.type === 'function', flag === 'true' && role === 'root');
+    if (flag !== 'true') assert(textOf(page).includes('runtime configuration'));
+    else if (!role) assert(textOf(page).includes('Waiting for'));
+    else if (role !== 'root') assert(textOf(page).includes(`account role as ${role}`));
     const routes = load('src/router/routes.tsx');
     const group = routes.find((route) => route.id === 'system-group');
     const Nested = load('src/layout/Sidebar/NestedNavButton/index.tsx');
