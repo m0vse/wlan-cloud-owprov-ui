@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import {
   Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel,
   Alert, AlertIcon, Badge, Box, Button, Heading, HStack, Select,
-  Table, Tbody, Td, Text, Th, Thead, Tr, VStack, Textarea, Input, useClipboard,
+  Table, Tbody, Td, Text, Th, Thead, Tr, VStack, Textarea, Input,
 } from '@chakra-ui/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { axiosProv, axiosGw } from 'utils/axiosInstances';
 import { axiosPki } from 'utils/pkiClient';
 import { useAuth } from 'contexts/AuthProvider';
 import ImportDeviceCsvModal from 'components/Tables/InventoryTable/ImportDeviceCsvModal';
+import { useEnrollmentClipboard } from 'hooks/useEnrollmentClipboard';
 
 type Job = { id: string; serial: string; state: string; message: string; kind?: string };
 type Certificate = {
@@ -31,7 +32,7 @@ const CertificatesPage = () => {
   const [batchSerials, setBatchSerials] = useState('');
   const [batchOperation, setBatchOperation] = useState('migration');
   const [enrollmentKey, setEnrollmentKey] = useState<EnrollmentKey>();
-  const { onCopy, hasCopied } = useClipboard(enrollmentKey?.enrollmentKey || '');
+  const { onCopy, hasCopied } = useEnrollmentClipboard(enrollmentKey?.enrollmentKey);
   const status = useQuery(['pki-status'], () => axiosPki.get<Status>('pki/status').then(({ data }) => data), {
     retry: false, refetchInterval: (data) => (data?.onboarding?.some((job) => ['waiting', 'running'].includes(job.state)) || data?.enrollmentBatches?.some((batch) => !!batch.active && batch.enrolled < batch.devices)) ? 10000 : false,
   });
