@@ -5,6 +5,7 @@ import AdvancedSettings from './AdvancedSettings';
 import ChannelPicker from './ChannelPicker';
 import LockedRadio from './LockedRadio';
 import { SINGLE_RADIO_SCHEMA } from './radiosConstants';
+import { RADIO_CHANNEL_MODES, radioChannelWidths } from './radioChannelOptions';
 import Rates from './Rates';
 import DeleteButton from 'components/Buttons/DeleteButton';
 import ConfigurationResourcePicker from 'components/CustomFields/ConfigurationResourcePicker';
@@ -96,11 +97,7 @@ const SingleRadio = ({ isDisabled: isFormDisabled, namePrefix, remove, canEditBa
               definitionKey="radio.channel-mode"
               isDisabled={isDisabled}
               isRequired
-              options={[
-                { value: 'HT', label: 'HT (A,B,G,N)' },
-                { value: 'VHT', label: 'VHT (A,B,G,N,AC)' },
-                { value: 'HE', label: 'HE (WiFi 6,A,B,G,N,AC,AX)' },
-              ]}
+              options={RADIO_CHANNEL_MODES}
             />
             <SelectField
               name={`${namePrefix}.channel-width`}
@@ -109,12 +106,7 @@ const SingleRadio = ({ isDisabled: isFormDisabled, namePrefix, remove, canEditBa
               isRequired
               isDisabled={isDisabled}
               isInt
-              options={[
-                { value: 20, label: '20 MHz' },
-                { value: 40, label: '40 MHz' },
-                { value: 80, label: '80 MHz' },
-                { value: 160, label: '160 MHz' },
-              ]}
+              options={radioChannelWidths(value?.band, value?.['channel-mode'])}
             />
             <ChannelPicker namePrefix={namePrefix} isDisabled={isDisabled} />
             <SelectField
