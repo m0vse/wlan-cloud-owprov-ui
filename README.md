@@ -40,3 +40,13 @@ The normal onboarding flow is select AP → Onboard, with resumable progress and
 Cancel. Approval is durable until completion/cancellation; no operator countdown,
 CSR upload, grant copying or qualification form is exposed. The current worker
 still awaits controller/AP integration and reports that waiting state honestly.
+
+## Controller login handoff
+
+The controller's provisioning button can pass its current session to a new portal
+tab using browser messages. The receiver accepts only its exact opener on the same
+HTTPS hostname's standard controller port, matching a random per-opening nonce.
+It replaces any previous portal account with tab-scoped credentials and then
+disconnects the opener. Credentials are never added to the URL or persistent
+storage; existing server-side profile and permission checks still apply. A direct
+visit uses the normal portal login. Both UIs must be updated together.
