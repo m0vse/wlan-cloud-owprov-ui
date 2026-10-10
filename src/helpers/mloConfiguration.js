@@ -8,6 +8,7 @@ export function mloConfigurationError(ssid, iface) {
   if ((ssid.purpose || 'user-defined') !== 'user-defined') return 'MLO currently supports user-defined SSIDs only.';
   if (ssid.roaming) return 'Disable 802.11r roaming for the initial MLO profile.';
   if (ssid['multi-psk']?.length) return 'Multi-PSK is not supported in the initial MLO profile.';
+  if (ssid.services?.includes('captive')) return 'Captive portals are not supported in the initial MLO profile.';
   if (iface?.['hostapd-bss-raw']?.length || ssid['hostapd-bss-raw']?.length)
     return 'Remove raw hostapd overrides for the initial MLO profile.';
   if (ssid.encryption?.proto !== 'sae' || ssid.encryption?.ieee80211w !== 'required')

@@ -19,6 +19,8 @@ assert.match(context.check({ ...config, 'bss-mode': 'sta' }), /AP-mode/);
 assert.match(context.check({ ...config, purpose: 'onboarding-ap' }), /user-defined/);
 assert.match(context.check({ ...config, roaming: { 'message-exchange': 'ds' } }), /roaming/);
 assert.match(context.check({ ...config, 'multi-psk': [{ key: 'test' }] }), /Multi-PSK/);
+assert.match(context.check({ ...config, services: ['captive'] }), /Captive/);
+assert.equal(context.check({ ...config, services: ['dhcp'] }), null);
 assert.match(context.check(config, { 'hostapd-bss-raw': ['mld_ap=0'] }), /hostapd/);
 assert.equal(context.check({ ...config, roaming: false, 'multi-psk': [] }, { 'hostapd-bss-raw': [] }), null);
 for (const proto of ['psk2', 'sae-mixed', 'none', 'wpa3'])
@@ -59,4 +61,5 @@ assert.deepEqual(saved['wifi-bands'], ['5G', '6G']);
 assert.equal(Object.hasOwn(schema.cast({ name: 'Legacy' }), 'mlo'), false);
 assert.throws(() => schema.validateSync({ ...valid, 'wifi-bands': ['5G'] }), /MLO/);
 assert.throws(() => schema.validateSync({ ...valid, roaming: true }), /roaming/);
+assert.throws(() => schema.validateSync({ ...valid, services: ['captive'] }), /Captive/);
 console.log('PASS: MLO optional/off compatibility, 5+6 GHz/AP/SAE/PMF validation, no credential rewrite and shared resource/config controls');
