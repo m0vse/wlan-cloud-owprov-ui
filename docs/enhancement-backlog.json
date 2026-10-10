@@ -1,0 +1,34 @@
+{
+  "updated": "2026-10-10",
+  "implementation_authorized_by_listing": false,
+  "items": [
+    {
+      "id": "operational-alerting",
+      "status": "requested; not implemented",
+      "description": "Configurable operational AP alerts delivered by email and SMS, reusing existing OpenWiFi SMTP and SMS components where suitable.",
+      "requirements": [
+        "Entity, Venue and AP scope; named recipients and severity selection",
+        "Offline AP, reported NAND/storage faults, radio failures and agreed resource thresholds",
+        "Fault persistence/debounce, repeat suppression and recovery notifications",
+        "Provider configuration, test delivery and visible delivery failures",
+        "Recipient and rule permissions must respect granular user scope",
+        "Use existing health telemetry; firmware changes only if a required signal is missing"
+      ],
+      "inspection": "OpenWiFi OWSEC contains SMTP, AWS SMS and Twilio components; gateway alarm events can be forwarded to Kafka. Sending components alone are not an operational alert policy engine."
+    },
+    {
+      "id": "granular-user-management",
+      "status": "previously requested; implementation plan exists; not yet implemented or enforced",
+      "description": "Carry forward the existing granular user access requirement rather than creating a second work item.",
+      "requirements": [
+        "Restrict users to selected Entities and Venues, with explicit descendant scope",
+        "Separate viewing, configuration editing, configuration push and disruptive device operations",
+        "Viewer, Config Editor, Site Operator and Customer Admin presets; retain platform administrator recovery",
+        "Enforce scope and actions server-side across APIs, lists, searches, exports, clients, telemetry, live events and queued operations",
+        "Prevent cross-customer data/secret disclosure and unauthorized copy or move",
+        "Audited changes, revocation and direct API isolation tests between two customers"
+      ],
+      "planning_note": "A role selector or hidden UI action is not proof of permission enforcement. Review existing APIs and the previously prepared user-access plan before implementation."
+    }
+  ]
+}
