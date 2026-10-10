@@ -4,6 +4,7 @@ import { getIn, useFormikContext } from 'formik';
 import MultiSelectField from 'components/FormFields/MultiSelectField';
 import SelectField from 'components/FormFields/SelectField';
 import StringField from 'components/FormFields/StringField';
+import MloSettings from 'components/FormFields/MloSettings';
 // eslint-disable-next-line max-len
 import AdvancedSettings from 'pages/ConfigurationPage/ConfigurationCard/ConfigurationSectionsCard/InterfaceSection/SingleInterface/SsidList/AdvancedSettings';
 import Encryption from 'pages/ConfigurationPage/ConfigurationCard/ConfigurationSectionsCard/InterfaceSection/SingleInterface/SsidList/Encryption';
@@ -60,6 +61,7 @@ const InterfaceSsidResourceForm = ({ isDisabled }: { isDisabled: boolean }) => {
           isRequired
         />
       </SimpleGrid>
+      <MloSettings namePrefix={namePrefix} isDisabled={isDisabled} />
       <Encryption
         editing={!isDisabled}
         ssidName={namePrefix}

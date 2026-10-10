@@ -64,6 +64,7 @@ const LockedAdvanced = ({ data }) => {
         </Heading>
       </Flex>
       <SimpleGrid minChildWidth="300px" spacing="20px">
+        <DisplayToggleField value={data?.mlo} label="Multi-Link Operation (MLO)" isDisabled />
         <DisplayToggleField
           value={data?.['hidden-ssid']}
           label="hidden-ssid"

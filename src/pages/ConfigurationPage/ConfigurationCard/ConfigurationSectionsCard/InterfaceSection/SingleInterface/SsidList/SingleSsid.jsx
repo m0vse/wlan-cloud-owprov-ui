@@ -13,6 +13,7 @@ import CardBody from 'components/Card/CardBody';
 import MultiSelectField from 'components/FormFields/MultiSelectField';
 import SelectField from 'components/FormFields/SelectField';
 import StringField from 'components/FormFields/StringField';
+import MloSettings from 'components/FormFields/MloSettings';
 
 const propTypes = {
   index: PropTypes.number.isRequired,
@@ -86,6 +87,7 @@ const SingleSsid = ({ editing, index, namePrefix, remove }) => {
                   isRequired
                 />
               </SimpleGrid>
+              <MloSettings namePrefix={namePrefix} isDisabled={!editing} />
               <Encryption
                 editing={editing}
                 ssidName={namePrefix}

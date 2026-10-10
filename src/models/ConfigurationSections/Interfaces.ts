@@ -1,4 +1,5 @@
 export interface Ssid {
+  mlo?: boolean;
   __variableBlock?: string[];
   radius?: {
     __variableBlock?: string[];

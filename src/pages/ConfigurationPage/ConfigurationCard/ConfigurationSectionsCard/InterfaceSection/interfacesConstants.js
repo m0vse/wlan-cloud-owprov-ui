@@ -10,6 +10,7 @@ import {
   testUcMac,
 } from 'constants/formTests';
 import { testStaticIpv4ClassD, testStaticIpv4ClassE } from 'utils/formatTests';
+import { mloConfigurationError } from 'helpers/mloConfiguration';
 
 export const DEFAULT_PASSPOINT_RADIUS = {
   authentication: {
@@ -527,6 +528,10 @@ export const INTERFACE_SSID_SCHEMA = (t, useDefault = false) => {
       })
       .default(''),
     purpose: string().default(undefined),
+    mlo: bool().default(undefined).test('mlo-profile', function validateMlo(value) {
+      const message = mloConfigurationError({ ...this.parent, mlo: value }, this.options.from?.[1]?.value);
+      return message ? this.createError({ message }) : true;
+    }),
     'wifi-bands': array()
       .of(string())
       .required(t('form.required'))
