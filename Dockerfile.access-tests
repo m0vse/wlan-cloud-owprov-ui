@@ -1,0 +1,10 @@
+FROM openwifi-owprov-mlo-tests:20261010
+USER 0:0
+WORKDIR /app
+COPY package.json package-lock.json /app/
+RUN npm ci --no-audit --no-fund
+RUN npm install --prefix /tmp/ui-test-dependencies --no-audit --no-fund --package-lock=false jsdom@22.1.0
+COPY . /app/
+RUN node test-user-access.cjs && NODE_PATH=/tmp/ui-test-dependencies/node_modules node test-user-access-interactions.cjs && \
+    node test-auth-protocol.cjs && node test-mlo-configuration.cjs && node test-radio-eht.cjs && node test-radio-enable.cjs && \
+    npm run build -- --outDir /tmp/owprov-access-build --emptyOutDir

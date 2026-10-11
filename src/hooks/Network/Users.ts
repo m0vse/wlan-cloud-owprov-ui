@@ -279,7 +279,7 @@ export const useCreateUser = () => {
   });
 };
 
-const modifyUser = async (newUser: AtLeast<User, 'id'>) => axiosSec.put(`user/${newUser.id}`, newUser);
+const modifyUser = async (newUser: AtLeast<User, 'id'> & { expectedPolicyRevision?: number }) => axiosSec.put(`user/${newUser.id}`, newUser);
 export const useUpdateUser = () => {
   const queryClient = useQueryClient();
 

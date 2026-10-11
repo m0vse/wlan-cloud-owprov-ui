@@ -13,6 +13,8 @@ import { testObjectName, testRegex } from 'constants/formTests';
 import { useAuth } from 'contexts/AuthProvider';
 import { User, useUpdateUser } from 'hooks/Network/Users';
 import useApiRequirements from 'hooks/useApiRequirements';
+import AccessEditor from './AccessEditor';
+import { canEditAccess, parseAccessPolicy } from 'helpers/userAccessPolicy';
 
 type Props = {
   editing: boolean;
@@ -39,24 +41,20 @@ const UpdateUserForm = ({ editing, isOpen, onClose, selectedUser, formRef }: Pro
       description: Yup.string(),
       mfa: Yup.string(),
       phoneNumber: Yup.string(),
+      securityPolicy: Yup.string().test('access-policy', 'Select a site and at least one permission.',
+        (value) => (value ?? '') === (selectedUser.securityPolicy ?? '') || (canEditAccess(user, selectedUser) &&
+          Number.isSafeInteger(selectedUser.securityPolicyChange) && selectedUser.securityPolicyChange >= 0 &&
+          !!parseAccessPolicy(value ?? ''))),
     });
 
   const formIsDisabled = () => {
     if (!editing) return true;
-    if (user?.userRole === 'root') return false;
-    if (user?.userRole === 'partner') return false;
-    if (user?.userRole === 'admin') {
-      if (selectedUser.userRole === 'root' || selectedUser.userRole === 'partner' || selectedUser.userRole === 'admin')
-        return true;
-      return false;
-    }
-    return true;
+    return user?.userRole !== 'root';
   };
 
   const canEditRole = () => {
     if (selectedUser.userRole === 'root') return false;
     if (user?.userRole === 'root') return true;
-    if (user?.userRole === 'admin' && selectedUser.userRole !== 'admin') return true;
     return false;
   };
 
@@ -71,15 +69,21 @@ const UpdateUserForm = ({ editing, isOpen, onClose, selectedUser, formRef }: Pro
       key={formKey}
       initialValues={selectedUser}
       validationSchema={UpdateUserSchema}
-      onSubmit={({ name, description, currentPassword, userRole, notes }, { setSubmitting, resetForm }) =>
-        updateUser.mutateAsync(
+      onSubmit={({ name, description, currentPassword, userRole, notes, securityPolicy }, { setSubmitting, resetForm }) => {
+        if (formIsDisabled()) {
+          setSubmitting(false);
+          return;
+        }
+        return updateUser.mutateAsync(
           {
             id: selectedUser.id,
             name,
-            currentPassword: currentPassword.length > 0 ? currentPassword : undefined,
+            currentPassword: currentPassword?.length > 0 ? currentPassword : undefined,
             userRole,
             description,
             notes: notes.filter((note) => note.isNew),
+            ...(securityPolicy !== selectedUser.securityPolicy && canEditAccess(user, selectedUser)
+              ? { securityPolicy, expectedPolicyRevision: selectedUser.securityPolicyChange } : {}),
           },
           {
             onSuccess: () => {
@@ -112,14 +116,15 @@ const UpdateUserForm = ({ editing, isOpen, onClose, selectedUser, formRef }: Pro
                 });
             },
           },
-        )
-      }
+        ).catch(() => { /* The mutation's onError displays the error and keeps the edits. */ });
+      }}
     >
       <>
         <Tabs variant="enclosed">
           <TabList>
             <Tab>{t('common.main')}</Tab>
             <Tab>{t('common.notes')}</Tab>
+            <Tab>Access</Tab>
           </TabList>
           <TabPanels>
             <TabPanel>
@@ -153,7 +158,10 @@ const UpdateUserForm = ({ editing, isOpen, onClose, selectedUser, formRef }: Pro
               </Form>
             </TabPanel>
             <TabPanel>
-              <NotesField isDisabled={!editing} />
+              <NotesField isDisabled={formIsDisabled()} />
+            </TabPanel>
+            <TabPanel>
+              <AccessEditor disabled={formIsDisabled() || !canEditAccess(user, selectedUser)} />
             </TabPanel>
           </TabPanels>
         </Tabs>
