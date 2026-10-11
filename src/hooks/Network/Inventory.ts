@@ -11,10 +11,12 @@ export const useGetSelectInventoryPaginated = ({
   serialNumbers,
   pageInfo,
   sortInfo,
+  enabled = true,
 }: {
   serialNumbers: string[];
   pageInfo?: PageInfo;
   sortInfo?: SortInfo;
+  enabled?: boolean;
 }) => {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -36,6 +38,7 @@ export const useGetSelectInventoryPaginated = ({
             .then(({ data }) => data.taglist)
         : [],
     {
+      enabled,
       staleTime: 30000,
       keepPreviousData: true,
       onError: (e: AxiosError) => {
@@ -55,6 +58,23 @@ export const useGetSelectInventoryPaginated = ({
       },
     },
   );
+};
+
+export const useScopedSiteInventory = ({ scopeType, scopeId, pageInfo, enabled }: {
+  scopeType: 'entity' | 'venue'; scopeId: string; pageInfo?: PageInfo; enabled: boolean;
+}) => {
+  const { user } = useAuth();
+  const limit = Math.max(1, Math.min(500, pageInfo?.limit ?? 10));
+  const index = Math.max(0, pageInfo?.index ?? 0);
+  const filter = `${scopeType}=${encodeURIComponent(scopeId)}`;
+  const canFetch = enabled && !!scopeId && user?.userRole !== 'root';
+  const count = useQuery(['get-site-inventory-count', user?.id, scopeType, scopeId],
+    () => axiosProv.get(`inventory?${filter}&countOnly=true`).then(({ data }) => data.count as number),
+    { enabled: canFetch, staleTime: 30000 });
+  const tags = useQuery(['get-site-inventory', user?.id, scopeType, scopeId, limit, index],
+    () => axiosProv.get(`inventory?${filter}&limit=${limit}&offset=${index * limit}`).then(({ data }) => data.taglist),
+    { enabled: canFetch && !!pageInfo, staleTime: 30000, keepPreviousData: false });
+  return { ...tags, count: count.data ?? 0 };
 };
 
 export const useGetInventoryTableSpecs = () =>

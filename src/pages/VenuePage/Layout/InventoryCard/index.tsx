@@ -28,7 +28,7 @@ type Props = {
 
 const VenueInventoryCard = ({ id }: Props) => {
   const { t } = useTranslation();
-  const { getVenue, getTags, setPageInfo } = useVenueInventory({ venueId: id });
+  const { getVenue, getTags, setPageInfo, count, serialNumbers } = useVenueInventory({ venueId: id });
   const queryClient = useQueryClient();
   const [tag, setTag] = React.useState<Device | undefined>(undefined);
   const [serialNumber, setSerialNumber] = React.useState<string>('');
@@ -73,6 +73,8 @@ const VenueInventoryCard = ({ id }: Props) => {
   const refetchTags = React.useCallback(() => {
     getVenue.refetch();
     queryClient.invalidateQueries(['get-inventory-with-select']);
+    queryClient.invalidateQueries(['get-site-inventory']);
+    queryClient.invalidateQueries(['get-site-inventory-count']);
   }, []);
 
   const columns: Column<InventoryTagApiResponse>[] = React.useMemo(
@@ -163,7 +165,7 @@ const VenueInventoryCard = ({ id }: Props) => {
         </Heading>
         <Spacer />
         <BulkPushConfig kind="venue" id={id} />
-        <ExportDevicesTableButton serialNumbers={getVenue.data?.devices ?? []} />
+        <ExportDevicesTableButton serialNumbers={serialNumbers} />
         <ImportDeviceCsvModal refresh={getVenue.refetch} parent={{ venue: id }} deviceClass="venue" />
         <CreateTagModal refresh={getVenue.refetch} entityId={`venue:${id}`} deviceClass="venue" />
         <RefreshButton onClick={refetchTags} isFetching={getTags.isFetching} ml={2} />
@@ -180,7 +182,7 @@ const VenueInventoryCard = ({ id }: Props) => {
               desc: false,
             },
           ]}
-          count={getVenue.data?.devices.length ?? 0}
+          count={count}
           setPageInfo={setPageInfo}
           minHeight="200px"
           onRowClick={openEditModal}

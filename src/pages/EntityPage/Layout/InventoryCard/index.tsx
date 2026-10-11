@@ -27,7 +27,7 @@ type Props = {
 
 const EntityInventoryCard = ({ id }: Props) => {
   const { t } = useTranslation();
-  const { getEntity, getTags, setPageInfo } = useEntityInventory({ entityId: id });
+  const { getEntity, getTags, setPageInfo, count, serialNumbers } = useEntityInventory({ entityId: id });
   const queryClient = useQueryClient();
   const [tag, setTag] = React.useState<Device | undefined>(undefined);
   const [serialNumber, setSerialNumber] = React.useState<string>('');
@@ -72,6 +72,8 @@ const EntityInventoryCard = ({ id }: Props) => {
   const refetchTags = React.useCallback(() => {
     getEntity.refetch();
     queryClient.invalidateQueries(['get-inventory-with-select']);
+    queryClient.invalidateQueries(['get-site-inventory']);
+    queryClient.invalidateQueries(['get-site-inventory-count']);
   }, []);
 
   const columns: Column<InventoryTagApiResponse>[] = React.useMemo(
@@ -162,7 +164,7 @@ const EntityInventoryCard = ({ id }: Props) => {
         </Heading>
         <Spacer />
         <BulkPushConfig kind="entity" id={id} />
-        <ExportDevicesTableButton serialNumbers={getEntity.data?.devices ?? []} />
+        <ExportDevicesTableButton serialNumbers={serialNumbers} />
         <ImportDeviceCsvModal
           refresh={getEntity.refetch}
           parent={{ entity: getEntity.data?.id }}
@@ -182,7 +184,7 @@ const EntityInventoryCard = ({ id }: Props) => {
               desc: false,
             },
           ]}
-          count={getEntity.data?.devices.length ?? 0}
+          count={count}
           setPageInfo={setPageInfo}
           minHeight="200px"
           onRowClick={openEditModal}
