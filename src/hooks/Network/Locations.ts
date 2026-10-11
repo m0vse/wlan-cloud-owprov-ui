@@ -5,6 +5,7 @@ import { AxiosError } from 'models/Axios';
 import { CreateLocation, Location } from 'models/Location';
 import { PageInfo } from 'models/Table';
 import { axiosProv } from 'utils/axiosInstances';
+import { useAuth } from 'contexts/AuthProvider';
 
 export const useGetLocationCount = ({ enabled }: { enabled: boolean }) => {
   const { t } = useTranslation();
@@ -44,6 +45,7 @@ export const useGetLocations = ({
   enabled: boolean;
   count: number;
 }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
@@ -51,7 +53,7 @@ export const useGetLocations = ({
     ['get-locations-with-pagination', pageInfo, count],
     () =>
       axiosProv
-        .get(`location?withExtendedInfo=true&limit=${pageInfo.limit}&offset=${pageInfo.limit * pageInfo.index}`)
+        .get(`location?${user?.userRole === 'root' ? 'withExtendedInfo=true&' : ''}limit=${pageInfo.limit}&offset=${pageInfo.limit * pageInfo.index}`)
         .then(({ data }) => data.locations as Location[]),
     {
       keepPreviousData: true,
@@ -77,6 +79,7 @@ export const useGetLocations = ({
 };
 
 export const useGetSelectLocations = ({ select, enabled = true }: { select: string[]; enabled: boolean }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
@@ -86,7 +89,7 @@ export const useGetSelectLocations = ({ select, enabled = true }: { select: stri
       select.length === 0
         ? []
         : axiosProv
-            .get(`location?withExtendedInfo=true&select=${select}`)
+            .get(`location?${user?.userRole === 'root' ? 'withExtendedInfo=true&' : ''}select=${select}`)
             .then(({ data }) => data.locations as Location[]),
     {
       enabled,
@@ -110,25 +113,25 @@ export const useGetSelectLocations = ({ select, enabled = true }: { select: stri
   );
 };
 
-const getLocationsBatch = async (limit: number, offset: number, venueId?: string) =>
+const getLocationsBatch = async (limit: number, offset: number, venueId?: string, extended = true) =>
   axiosProv
     .get(
       `${
         venueId
           ? `venue?locationsForVenue=${venueId}&limit=${limit}&offset=${offset}`
-          : `location?withExtendedInfo=true&limit=${limit}&offset=${offset}`
+          : `location?${extended ? 'withExtendedInfo=true&' : ''}limit=${limit}&offset=${offset}`
       }`,
     )
     .then(({ data }) => data.locations as Location[]);
 
-const getAllLocations = async (venueId?: string) => {
+const getAllLocations = async (venueId?: string, extended = true) => {
   const limit = 500;
   let offset = 0;
   let data: Location[] = [];
   let lastResponse: Location[] = [];
   do {
     // eslint-disable-next-line no-await-in-loop
-    lastResponse = await getLocationsBatch(limit, offset, venueId);
+    lastResponse = await getLocationsBatch(limit, offset, venueId, extended);
     data = data.concat(lastResponse);
     offset += limit;
   } while (lastResponse.length === limit && venueId === undefined);
@@ -136,10 +139,12 @@ const getAllLocations = async (venueId?: string) => {
 };
 
 export const useGetAllLocations = ({ venueId }: { venueId?: string }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
-  return useQuery(['get-all-locations', venueId], () => getAllLocations(venueId), {
+  return useQuery(['get-all-locations', venueId], () => getAllLocations(venueId, user?.userRole === 'root'), {
+    enabled: !venueId || user?.userRole === 'root',
     staleTime: 1000 * 60,
     onError: (e: AxiosError) => {
       if (!toast.isActive('locations-fetching-error'))

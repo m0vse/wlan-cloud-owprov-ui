@@ -5,6 +5,7 @@ import { v4 as uuid } from 'uuid';
 import { AxiosError } from 'models/Axios';
 import { PageInfo, SortInfo } from 'models/Table';
 import { axiosProv } from 'utils/axiosInstances';
+import { useAuth } from 'contexts/AuthProvider';
 
 export const useGetSelectInventoryPaginated = ({
   serialNumbers,
@@ -15,6 +16,7 @@ export const useGetSelectInventoryPaginated = ({
   pageInfo?: PageInfo;
   sortInfo?: SortInfo;
 }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
   const paginatedSerials = pageInfo
@@ -30,7 +32,7 @@ export const useGetSelectInventoryPaginated = ({
     () =>
       paginatedSerials.length > 0
         ? axiosProv
-            .get(`inventory?withExtendedInfo=true&select=${paginatedSerials}${sortString}`)
+            .get(`inventory?${user?.userRole === 'root' ? 'withExtendedInfo=true&' : ''}select=${paginatedSerials}${sortString}`)
             .then(({ data }) => data.taglist)
         : [],
     {
@@ -126,6 +128,7 @@ export const useGetInventoryTags = ({
   onlyUnassigned?: boolean;
   isSubscribersOnly?: boolean;
 }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
   let sortString = '';
@@ -140,7 +143,7 @@ export const useGetInventoryTags = ({
         tagSelect.length > 0
           ? axiosProv
               .get(
-                `inventory?withExtendedInfo=true&select=${tagSelect}${
+                `inventory?${user?.userRole === 'root' ? 'withExtendedInfo=true&' : ''}select=${tagSelect}${
                   isSubscribersOnly ? '&subscribersOnly=true' : ''
                 }${sortString}`,
               )
@@ -201,7 +204,7 @@ export const useGetInventoryTags = ({
     () =>
       axiosProv
         .get(
-          `inventory?withExtendedInfo=true&limit=${pageInfo?.limit ?? 10}&offset=${
+          `inventory?${user?.userRole === 'root' ? 'withExtendedInfo=true&' : ''}limit=${pageInfo?.limit ?? 10}&offset=${
             (pageInfo?.limit ?? 10) * (pageInfo?.index ?? 1)
           }${onlyUnassigned ? '&unassigned=true' : ''}${isSubscribersOnly ? '&subscribersOnly=true' : ''}${sortString}`,
         )

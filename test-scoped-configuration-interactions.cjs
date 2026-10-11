@@ -45,6 +45,9 @@ const transport = {
     if (url.startsWith('venue/')) return { data: { id: siteId, name: 'Venue', configurations: [siteId] } };
     if (url.startsWith('variable?')) return { data: { variableBlocks: [] } };
     if (url.startsWith('variable/')) return { data: { id: siteId, name: 'Resource' } };
+    if (url.startsWith('inventory?')) return { data: { taglist: [] } };
+    if (url.startsWith('contact?')) return { data: { contacts: [] } };
+    if (url.startsWith('location?')) return { data: { locations: [] } };
     throw new Error(`Unexpected GET ${url}`);
   },
   post: async (url, body) => { calls.push({ url, body }); assert.equal(url, 'access/check'); return { data: { allowed } }; },
@@ -92,12 +95,19 @@ const api = require('./src/hooks/Network/Configurations.ts');
 const entityApi = require('./src/hooks/Network/Entity.ts');
 const venueApi = require('./src/hooks/Network/Venues.ts');
 const resourceApi = require('./src/hooks/Network/Resources.ts');
+const inventoryApi = require('./src/hooks/Network/Inventory.ts');
+const contactApi = require('./src/hooks/Network/Contacts.ts');
+const locationApi = require('./src/hooks/Network/Locations.ts');
 const HookProbe = () => {
   mutation = api.useUpdateConfiguration({ id: siteId });
   api.useGetSelectConfigurations({ select: [siteId] }); api.useGetConfigurations();
   entityApi.useGetEntity({ id: siteId }); venueApi.useGetVenue({ id: siteId });
   entityApi.useGetSelectEntities({ select: [siteId] }); venueApi.useGetSelectVenues({ select: [siteId] });
   resourceApi.useGetResource({ id: siteId, enabled: true }); resourceApi.useGetResources({ select: [siteId] });
+  inventoryApi.useGetInventoryTags({ tagSelect: [siteId], enabled: true });
+  inventoryApi.useGetSelectInventoryPaginated({ serialNumbers: [siteId], pageInfo: { limit: 10, index: 0 } });
+  contactApi.useGetSelectContacts({ select: [siteId] }); contactApi.useGetAllContacts();
+  locationApi.useGetSelectLocations({ select: [siteId], enabled: true }); locationApi.useGetAllLocations({});
   return null;
 };
 let root, container, client;
@@ -117,7 +127,7 @@ const check = (condition, label) => { assert.ok(condition, label); ++checks; };
   user = makeUser('viewer'); await render();
   check(container.textContent.includes('Original') && find('toggle-edit').disabled, 'viewer loads configuration with editing disabled');
   check(!container.textContent.includes('Transfer configuration') && !container.textContent.includes('Delete configuration'), 'scoped global ownership actions absent');
-  check(calls.filter((call) => typeof call === 'string').every((url) => !/withExtendedInfo|expandInUse|computedAffected/.test(url)), 'all scoped config/entity/venue/resource reads plain');
+  check(calls.filter((call) => typeof call === 'string').every((url) => !/withExtendedInfo|expandInUse|computedAffected/.test(url)), 'all scoped config/entity/venue/resource/inventory/contact/location reads plain');
   const before = puts.length; await settle(() => mutation.mutateAsync({ name: 'Forbidden' }).catch(() => {}));
   check(puts.length === before, 'viewer direct update hook denied');
   user = makeUser('editor', 'installer'); calls = []; await render();

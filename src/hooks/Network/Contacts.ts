@@ -5,6 +5,7 @@ import { AxiosError } from 'models/Axios';
 import { ContactObj, CreateContactObj } from 'models/Contact';
 import { PageInfo } from 'models/Table';
 import { axiosProv } from 'utils/axiosInstances';
+import { useAuth } from 'contexts/AuthProvider';
 
 export const useGetContactCount = ({ enabled }: { enabled: boolean }) => {
   const { t } = useTranslation();
@@ -44,6 +45,7 @@ export const useGetContacts = ({
   enabled?: boolean;
   count?: number;
 }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
@@ -51,7 +53,7 @@ export const useGetContacts = ({
     ['get-contacts-with-pagination', pageInfo, count],
     () =>
       axiosProv
-        .get(`contact?withExtendedInfo=true&limit=${pageInfo.limit}&offset=${pageInfo.limit * pageInfo.index}`)
+        .get(`contact?${user?.userRole === 'root' ? 'withExtendedInfo=true&' : ''}limit=${pageInfo.limit}&offset=${pageInfo.limit * pageInfo.index}`)
         .then(({ data }) => data.contacts as ContactObj[]),
     {
       keepPreviousData: true,
@@ -77,6 +79,7 @@ export const useGetContacts = ({
 };
 
 export const useGetSelectContacts = ({ select }: { select: string[] }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
@@ -86,7 +89,7 @@ export const useGetSelectContacts = ({ select }: { select: string[] }) => {
       select.length === 0
         ? ([] as ContactObj[])
         : axiosProv
-            .get(`contact?withExtendedInfo=true&select=${select}`)
+            .get(`contact?${user?.userRole === 'root' ? 'withExtendedInfo=true&' : ''}select=${select}`)
             .then(({ data }) => data.contacts as ContactObj[]),
     {
       staleTime: 100 * 1000,
@@ -109,19 +112,19 @@ export const useGetSelectContacts = ({ select }: { select: string[] }) => {
   );
 };
 
-const getContactsBatch = async (limit: number, offset: number) =>
+const getContactsBatch = async (limit: number, offset: number, extended: boolean) =>
   axiosProv
-    .get(`contact?withExtendedInfo=true&limit=${limit}&offset=${offset}`)
+    .get(`contact?${extended ? 'withExtendedInfo=true&' : ''}limit=${limit}&offset=${offset}`)
     .then(({ data }) => data.contacts as ContactObj[]);
 
-const getAllContacts = async () => {
+const getAllContacts = async (extended: boolean) => {
   const limit = 500;
   let offset = 0;
   let data: ContactObj[] = [];
   let lastResponse: ContactObj[] = [];
   do {
     // eslint-disable-next-line no-await-in-loop
-    lastResponse = await getContactsBatch(limit, offset);
+    lastResponse = await getContactsBatch(limit, offset, extended);
     data = data.concat(lastResponse);
     offset += 500;
   } while (lastResponse.length === 500);
@@ -129,10 +132,11 @@ const getAllContacts = async () => {
 };
 
 export const useGetAllContacts = () => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
-  return useQuery(['get-all-contacts'], () => getAllContacts(), {
+  return useQuery(['get-all-contacts'], () => getAllContacts(user?.userRole === 'root'), {
     staleTime: 60 * 1000,
     onError: (e: AxiosError) => {
       if (!toast.isActive('contacts-fetching-error'))
