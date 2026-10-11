@@ -84,6 +84,7 @@ const check = (condition, label) => { assert.ok(condition, label); ++checks; };
     check(calls.some((url) => url === `inventory?${kind}=${siteId}&limit=1&offset=0`), `${kind} exact filtered first page`);
     check(!calls.some((url) => url.includes(foreignId) || url.includes('select=')), `${kind} no foreign/global/relation-ID request`);
     await settle(() => table.setPageInfo({ limit: 1, index: 1 }));
+    for (let i = 0; i < 12 && !container.textContent.includes('Owned AP 1'); ++i) await settle();
     check(container.textContent.includes('Owned AP 1') && !container.textContent.includes('Owned AP 0'), `${kind} pagination replaces page`);
     check(calls.some((url) => url === `inventory?${kind}=${siteId}&limit=1&offset=1`), `${kind} bounded next page`);
     calls = []; actor = { ...actor, userRole: 'root' }; await render(Card);
