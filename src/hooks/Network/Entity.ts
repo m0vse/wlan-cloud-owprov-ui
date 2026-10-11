@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Entity } from '../../models/Entity';
 import { AxiosError } from 'models/Axios';
 import { axiosProv, axiosSec } from 'utils/axiosInstances';
+import { useAuth } from 'contexts/AuthProvider';
 
 export type TreeVenue = {
   name: string;
@@ -64,19 +65,19 @@ export const useGetEntityTree = () => {
   );
 };
 
-const getEntitiesBatch = async (limit: number, offset: number) =>
+const getEntitiesBatch = async (limit: number, offset: number, extended: boolean) =>
   axiosProv
-    .get(`entity?withExtendedInfo=true&offset=${offset}&limit=${limit}`)
+    .get(`entity?${extended ? 'withExtendedInfo=true&' : ''}offset=${offset}&limit=${limit}`)
     .then(({ data }: { data: { entities: Entity[] } }) => data.entities);
 
-const getAllEntities = async () => {
+const getAllEntities = async (extended: boolean) => {
   const limit = 500;
   let offset = 0;
   let data: Entity[] = [];
   let lastResponse: Entity[] = [];
   do {
     // eslint-disable-next-line no-await-in-loop
-    lastResponse = await getEntitiesBatch(limit, offset);
+    lastResponse = await getEntitiesBatch(limit, offset, extended);
     data = data.concat(lastResponse);
     offset += limit;
   } while (lastResponse.length === limit);
@@ -84,10 +85,11 @@ const getAllEntities = async () => {
 };
 
 export const useGetEntities = () => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
-  return useQuery(['get-entities'], () => getAllEntities(), {
+  return useQuery(['get-entities'], () => getAllEntities(user?.userRole === 'root'), {
     staleTime: 30000,
     onError: (e: AxiosError) => {
       if (!toast.isActive('entities-fetching-error'))
@@ -108,6 +110,7 @@ export const useGetEntities = () => {
 };
 
 export const useGetSelectEntities = ({ select }: { select: string[] }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
@@ -116,7 +119,7 @@ export const useGetSelectEntities = ({ select }: { select: string[] }) => {
     () =>
       select.length === 0
         ? []
-        : axiosProv.get(`entity?withExtendedInfo=true&select=${select}`).then(({ data }) => data.entities),
+        : axiosProv.get(`entity?${user?.userRole === 'root' ? 'withExtendedInfo=true&' : ''}select=${select}`).then(({ data }) => data.entities),
     {
       staleTime: 100 * 1000,
       onError: (e: AxiosError) => {
@@ -139,12 +142,13 @@ export const useGetSelectEntities = ({ select }: { select: string[] }) => {
 };
 
 export const useGetEntity = ({ id }: { id?: string }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
   return useQuery(
     ['get-entity', id],
-    () => axiosProv.get(`entity/${id}?withExtendedInfo=true`).then(({ data }) => data as Entity),
+    () => axiosProv.get(`entity/${id}${user?.userRole === 'root' ? '?withExtendedInfo=true' : ''}`).then(({ data }) => data as Entity),
     {
       keepPreviousData: true,
       staleTime: 1000 * 5,

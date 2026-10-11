@@ -16,6 +16,9 @@ import { Formik, Form } from 'formik';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { v4 as uuid } from 'uuid';
+import * as Yup from 'yup';
+import { useAuth } from 'contexts/AuthProvider';
+import { testObjectName } from 'constants/formTests';
 import DeviceRulesField from 'components/CustomFields/DeviceRulesField';
 import NotesTable from 'components/CustomFields/NotesTable';
 import MultiSelectField from 'components/FormFields/MultiSelectField';
@@ -36,6 +39,8 @@ const propTypes = {
 };
 
 const EditConfigurationForm = ({ editing, configuration, formRef }) => {
+  const { user } = useAuth();
+  const root = user?.userRole === 'root';
   const { t } = useTranslation();
   const toast = useToast();
   const [formKey, setFormKey] = useState(uuid());
@@ -68,7 +73,10 @@ const EditConfigurationForm = ({ editing, configuration, formRef }) => {
           ...configuration,
           entity: getEntity(),
         }}
-        validationSchema={EntitySchema(t)}
+        validationSchema={root ? EntitySchema(t) : Yup.object({
+          name: Yup.string().required(t('form.required')).test('name_test', t('common.name_error'), testObjectName),
+          description: Yup.string(), deviceTypes: Yup.array().of(Yup.string()),
+        })}
       >
         <Tabs variant="enclosed" w="100%">
           <TabList>
@@ -95,13 +103,13 @@ const EditConfigurationForm = ({ editing, configuration, formRef }) => {
                     canSelectAll
                     isDisabled={!editing}
                   />
-                  <DeviceRulesField isDisabled={!editing} />
+                  <DeviceRulesField isDisabled={!editing || !root} />
                   <StringField name="description" label={t('common.description')} isDisabled={!editing} />
                   <SelectWithSearchField
                     name="entity"
                     label={t('inventory.parent')}
                     isRequired
-                    isDisabled={!editing}
+                    isDisabled={!editing || !root}
                     options={[
                       {
                         label: t('entities.title'),
@@ -121,7 +129,7 @@ const EditConfigurationForm = ({ editing, configuration, formRef }) => {
                       },
                     ]}
                   />
-                  <FormControl>
+                  {root && <FormControl>
                     <FormLabel ms="4px" fontSize="md" fontWeight="normal">
                       In Use By
                     </FormLabel>
@@ -130,7 +138,7 @@ const EditConfigurationForm = ({ editing, configuration, formRef }) => {
                         'venues.one',
                       )}, ${inUse?.inv?.length ?? 0} ${t('devices.title')}`}
                     </Button>
-                  </FormControl>
+                  </FormControl>}
                 </SimpleGrid>
               </Form>
             </TabPanel>

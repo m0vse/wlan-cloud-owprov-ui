@@ -55,6 +55,9 @@ export const grantPreset = (grant: AccessGrant) => ['viewer', 'editor', 'operato
 export const canEditAccess = (actor: { id: string; userRole: string } | undefined,
   target: { id: string; userRole: string }) => actor?.userRole === 'root' && target.userRole !== 'root' && actor.id !== target.id;
 
+export const hasAccessCapability = (user: { userRole: string; securityPolicy: string } | undefined, capability: string) =>
+  user?.userRole === 'root' || !!parseAccessPolicy(user?.securityPolicy ?? '')?.grants.some((grant) => grant.capabilities.includes(capability));
+
 // Navigation eligibility only. Individual records and actions remain authorized
 // by the controller, including descendant scopes and device ownership.
 export const canAccessRoute = (user: { userRole: string; securityPolicy: string } | undefined,

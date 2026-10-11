@@ -4,15 +4,18 @@ import { useTranslation } from 'react-i18next';
 import useDefaultPage from 'hooks/useDefaultPage';
 import { AxiosError } from 'models/Axios';
 import { axiosProv } from 'utils/axiosInstances';
+import { useAuth } from 'contexts/AuthProvider';
+import { hasAccessCapability } from 'helpers/userAccessPolicy';
 
 export const useGetConfigurations = () => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
   return useQuery(
     ['get-configurations'],
     () =>
-      axiosProv.get('configuration?withExtendedInfo=true&offset=0, limit=500').then(({ data }) => data.configurations),
+      axiosProv.get(`configuration?${user?.userRole === 'root' ? 'withExtendedInfo=true&' : ''}offset=0&limit=500`).then(({ data }) => data.configurations),
     {
       staleTime: 200 * 1000,
       onError: (e: AxiosError) => {
@@ -35,6 +38,7 @@ export const useGetConfigurations = () => {
 };
 
 export const useGetSelectConfigurations = ({ select }: { select: string[] }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
@@ -43,7 +47,7 @@ export const useGetSelectConfigurations = ({ select }: { select: string[] }) => 
     () =>
       select.length === 0
         ? []
-        : axiosProv.get(`configuration?withExtendedInfo=true&select=${select}`).then(({ data }) => data.configurations),
+        : axiosProv.get(`configuration?${user?.userRole === 'root' ? 'withExtendedInfo=true&' : ''}select=${select}`).then(({ data }) => data.configurations),
     {
       staleTime: 100 * 1000,
       onError: (e: AxiosError) => {
@@ -93,13 +97,14 @@ export const useGetAvailableConfigurations = ({ tagId }: { tagId: string }) => {
 };
 
 export const useGetConfiguration = ({ id, onSuccess = () => {} }: { id?: string | null; onSuccess?: () => void }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
   const goToDefaultPage = useDefaultPage();
 
   return useQuery(
     ['get-configuration', id],
-    () => axiosProv.get(`configuration/${id}?withExtendedInfo=true`).then(({ data }) => data),
+    () => axiosProv.get(`configuration/${id}${user?.userRole === 'root' ? '?withExtendedInfo=true' : ''}`).then(({ data }) => data),
     {
       enabled: id !== undefined && id !== null && id !== '',
       keepPreviousData: true,
@@ -126,6 +131,7 @@ export const useGetConfiguration = ({ id, onSuccess = () => {} }: { id?: string 
 };
 
 export const useGetConfigurationInUse = ({ id, enabled }: { id: string; enabled: boolean }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
@@ -133,7 +139,7 @@ export const useGetConfigurationInUse = ({ id, enabled }: { id: string; enabled:
     ['get-config-in-use', id],
     () => axiosProv.get(`/configuration/${id}?expandInUse=true`).then(({ data }) => data.entries),
     {
-      enabled,
+      enabled: enabled && user?.userRole === 'root',
       onError: (e: AxiosError) => {
         toast({
           id: 'config-in-use-fetching-error',
@@ -153,6 +159,7 @@ export const useGetConfigurationInUse = ({ id, enabled }: { id: string; enabled:
 };
 
 export const useGetConfigurationAffected = ({ id, enabled }: { id: string; enabled: boolean }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
@@ -160,7 +167,7 @@ export const useGetConfigurationAffected = ({ id, enabled }: { id: string; enabl
     ['get-config-affected', id],
     () => axiosProv.get(`/configuration/${id}?computedAffected=true`).then(({ data }) => data.affectedDevices),
     {
-      enabled,
+      enabled: enabled && user?.userRole === 'root',
       onError: (e: AxiosError) => {
         toast({
           id: 'config-in-use-fetching-error',
@@ -181,5 +188,23 @@ export const useGetConfigurationAffected = ({ id, enabled }: { id: string; enabl
 
 export const useDeleteConfiguration = () => useMutation((id: string) => axiosProv.delete(`configuration/${id}`));
 
-export const useUpdateConfiguration = ({ id }: { id: string }) =>
-  useMutation((newConf) => axiosProv.put(`configuration/${id}`, newConf));
+export const useUpdateConfiguration = ({ id }: { id: string }) => {
+  const { user } = useAuth();
+  return useMutation((newConf: Record<string, unknown>) => {
+    if (!hasAccessCapability(user, 'configuration.write')) return Promise.reject(new Error('Configuration editing is not assigned.'));
+    const payload = user?.userRole === 'root' ? newConf : Object.fromEntries(Object.entries(newConf)
+      .filter(([key]) => ['name', 'description', 'configuration', 'notes', 'deviceTypes'].includes(key)));
+    return axiosProv.put(`configuration/${id}`, payload);
+  });
+};
+
+export const useConfigurationEditAccess = (id: string) => {
+  const { user } = useAuth();
+  const root = user?.userRole === 'root';
+  const candidate = hasAccessCapability(user, 'configuration.write');
+  const check = useQuery(['configuration-edit-access', user?.id, id, user?.securityPolicyChange],
+    () => axiosProv.post('access/check', { userId: user?.id, objectType: 'configuration', objectId: id,
+      capability: 'configuration.write' }).then(({ data }) => data.allowed === true),
+    { enabled: !root && candidate && !!id, retry: false, staleTime: 10000 });
+  return root || (candidate && check.data === true);
+};

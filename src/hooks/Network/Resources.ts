@@ -5,6 +5,7 @@ import { AxiosError } from 'models/Axios';
 import { Resource } from 'models/Resource';
 import { PageInfo } from 'models/Table';
 import { axiosProv } from 'utils/axiosInstances';
+import { useAuth } from 'contexts/AuthProvider';
 
 export const useGetResourcesCount = () => {
   const { t } = useTranslation();
@@ -82,6 +83,7 @@ export const useGetResources = ({
   select?: string[];
   count?: number;
 }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
@@ -91,7 +93,7 @@ export const useGetResources = ({
       () =>
         select.length > 0
           ? axiosProv
-              .get(`variable?withExtendedInfo=true&select=${select}`)
+              .get(`variable?${user?.userRole === 'root' ? 'withExtendedInfo=true&' : ''}select=${select}`)
               .then(({ data }: { data: { variableBlocks: Resource[] } }) => data.variableBlocks)
           : [],
       {
@@ -119,7 +121,7 @@ export const useGetResources = ({
     () =>
       axiosProv
         .get(
-          `variable?withExtendedInfo=true&limit=${pageInfo?.limit ?? 10}&offset=${
+          `variable?${user?.userRole === 'root' ? 'withExtendedInfo=true&' : ''}limit=${pageInfo?.limit ?? 10}&offset=${
             (pageInfo?.limit ?? 10) * (pageInfo?.index ?? 1)
           }`,
         )
@@ -147,12 +149,13 @@ export const useGetResources = ({
 };
 
 export const useGetResource = ({ id, enabled }: { id: string; enabled: boolean }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
   return useQuery(
     ['get-resource', id],
-    () => axiosProv.get(`variable/${id}?withExtendedInfo=true`).then(({ data }) => data),
+    () => axiosProv.get(`variable/${id}${user?.userRole === 'root' ? '?withExtendedInfo=true' : ''}`).then(({ data }) => data),
     {
       enabled,
       onError: (e: AxiosError) => {

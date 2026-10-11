@@ -7,6 +7,7 @@ import { useGetConfiguration } from 'hooks/Network/Configurations';
 import { useGetResources } from 'hooks/Network/Resources';
 import { Resource } from 'models/Resource';
 import { axiosProv } from 'utils/axiosInstances';
+import { useAuth } from 'contexts/AuthProvider';
 
 const ConfigurationContext = React.createContext<{
   configurationId: string;
@@ -26,6 +27,7 @@ export const ConfigurationProvider = ({
   entityId?: string;
   ownerScope?: { venue?: string; entity?: string };
 }) => {
+  const { user } = useAuth();
   const getConfig = useGetConfiguration({ id: configurationId, onSuccess: () => {} });
   const venueId = () => {
     const split = entityId?.split(':');
@@ -47,7 +49,7 @@ export const ConfigurationProvider = ({
   const inheritedResources = useQuery(
     ['configuration-resource-ancestry', scope.venue ?? '', scope.entity ?? ''],
     () => collectInheritedResourceIds(scope, async (kind, id) => {
-      const { data } = await axiosProv.get(`${kind}/${encodeURIComponent(id)}?withExtendedInfo=true`);
+      const { data } = await axiosProv.get(`${kind}/${encodeURIComponent(id)}${user?.userRole === 'root' ? '?withExtendedInfo=true' : ''}`);
       return data;
     }),
     { enabled: Boolean(scope.venue || scope.entity), staleTime: 0, retry: false, keepPreviousData: false },

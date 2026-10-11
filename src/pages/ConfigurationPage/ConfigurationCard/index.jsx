@@ -20,7 +20,8 @@ import CardHeader from 'components/Card/CardHeader';
 import LoadingOverlay from 'components/LoadingOverlay';
 import ConfirmCloseAlert from 'components/Modals/Actions/ConfirmCloseAlert';
 import { ConfigurationProvider } from 'contexts/ConfigurationProvider';
-import { useGetConfiguration, useUpdateConfiguration } from 'hooks/Network/Configurations';
+import { useConfigurationEditAccess, useGetConfiguration, useUpdateConfiguration } from 'hooks/Network/Configurations';
+import { useAuth } from 'contexts/AuthProvider';
 
 const propTypes = {
   id: PropTypes.string.isRequired,
@@ -35,6 +36,9 @@ const try_parse = (value) => {
 };
 
 const ConfigurationCard = ({ id }) => {
+  const { user } = useAuth();
+  const root = user?.userRole === 'root';
+  const canEdit = useConfigurationEditAccess(id);
   const { t } = useTranslation();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -62,6 +66,7 @@ const ConfigurationCard = ({ id }) => {
   );
 
   const submit = () => {
+    if (!canEdit) return;
     closeWarnings();
     updateEntity.mutateAsync(
       {
@@ -116,7 +121,7 @@ const ConfigurationCard = ({ id }) => {
           });
         },
       },
-    );
+    ).catch(() => { /* The mutation error callback retains edits and displays the failure. */ });
   };
 
   const handleSubmitClick = () => {
@@ -130,6 +135,7 @@ const ConfigurationCard = ({ id }) => {
   const stopEditing = () => (form.dirty || sections.isDirty ? openConfirm() : setEditing.off());
 
   const toggleEdit = () => {
+    if (!canEdit) return;
     if (editing) stopEditing();
     else setEditing.on();
   };
@@ -148,7 +154,7 @@ const ConfigurationCard = ({ id }) => {
           </Box>
           <Spacer />
           <Box>
-            {configuration && (
+            {configuration && root && (
               <ObjectTransfer
                 kind="configuration"
                 object={configuration}
@@ -160,18 +166,18 @@ const ConfigurationCard = ({ id }) => {
               onClick={handleSubmitClick}
               isLoading={updateEntity.isLoading}
               isDisabled={
-                !editing || !form.isValid || sections.invalidValues.length > 0 || (!form.dirty && !sections.isDirty)
+                !canEdit || !editing || !form.isValid || sections.invalidValues.length > 0 || (!form.dirty && !sections.isDirty)
               }
               ml={2}
             />
             <ToggleEditButton
               toggleEdit={toggleEdit}
               isEditing={editing}
-              isDisabled={isFetching}
+              isDisabled={isFetching || !canEdit}
               isDirty={formRef.dirty}
               ml={2}
             />
-            <DeleteConfigurationPopover isDisabled={editing || isFetching} configuration={configuration} />
+            {root && <DeleteConfigurationPopover isDisabled={editing || isFetching} configuration={configuration} />}
             <RefreshButton onClick={refetch} isFetching={isFetching} isDisabled={editing} ml={2} />
           </Box>
         </CardHeader>
@@ -183,7 +189,7 @@ const ConfigurationCard = ({ id }) => {
           ) : (
             <LoadingOverlay isLoading={isFetching}>
               <EditConfigurationForm
-                editing={editing}
+                editing={editing && canEdit}
                 configuration={configuration}
                 stopEditing={setEditing.off}
                 formRef={formRef}
@@ -193,7 +199,7 @@ const ConfigurationCard = ({ id }) => {
         </CardBody>
       </Card>
       <ConfigurationProvider configurationId={id}>
-        <ConfigurationSectionsCard editing={editing} configId={id} setSections={setSections} />
+        <ConfigurationSectionsCard editing={editing && canEdit} configId={id} setSections={setSections} />
       </ConfigurationProvider>
       <ConfirmConfigurationWarnings
         isOpen={showWarnings}

@@ -6,20 +6,21 @@ import useDefaultPage from '../useDefaultPage';
 import { AxiosError } from 'models/Axios';
 import { VenueApiResponse } from 'models/Venue';
 import { axiosProv } from 'utils/axiosInstances';
+import { useAuth } from 'contexts/AuthProvider';
 
-const getVenuesBatch = async (limit: number, offset: number) =>
+const getVenuesBatch = async (limit: number, offset: number, extended: boolean) =>
   axiosProv
-    .get(`venue?withExtendedInfo=true&offset=${offset}&limit=${limit}`)
+    .get(`venue?${extended ? 'withExtendedInfo=true&' : ''}offset=${offset}&limit=${limit}`)
     .then(({ data }) => data.venues as VenueApiResponse[]);
 
-const getAllVenues = async () => {
+const getAllVenues = async (extended: boolean) => {
   const limit = 500;
   let offset = 0;
   let data: VenueApiResponse[] = [];
   let lastResponse: VenueApiResponse[] = [];
   do {
     // eslint-disable-next-line no-await-in-loop
-    lastResponse = await getVenuesBatch(limit, offset);
+    lastResponse = await getVenuesBatch(limit, offset, extended);
     data = data.concat(lastResponse);
     offset += limit;
   } while (lastResponse.length === limit);
@@ -27,10 +28,11 @@ const getAllVenues = async () => {
 };
 
 export const useGetVenues = () => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
-  return useQuery(['get-venues'], () => getAllVenues(), {
+  return useQuery(['get-venues'], () => getAllVenues(user?.userRole === 'root'), {
     staleTime: 30000,
     onError: (e: AxiosError) => {
       if (!toast.isActive('venues-fetching-error'))
@@ -51,6 +53,7 @@ export const useGetVenues = () => {
 };
 
 export const useGetSelectVenues = ({ select }: { select: string[] }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
 
@@ -59,7 +62,7 @@ export const useGetSelectVenues = ({ select }: { select: string[] }) => {
     () =>
       select.length === 0
         ? []
-        : axiosProv.get(`venue?withExtendedInfo=true&select=${select}`).then(({ data }) => data.venues),
+        : axiosProv.get(`venue?${user?.userRole === 'root' ? 'withExtendedInfo=true&' : ''}select=${select}`).then(({ data }) => data.venues),
     {
       staleTime: 100 * 1000,
       onError: (e: AxiosError) => {
@@ -82,13 +85,14 @@ export const useGetSelectVenues = ({ select }: { select: string[] }) => {
 };
 
 export const useGetVenue = ({ id }: { id?: string }) => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
   const goToDefaultPage = useDefaultPage();
 
   return useQuery(
     ['get-venue', id],
-    () => axiosProv.get(`venue/${id}?withExtendedInfo=true`).then(({ data }: { data: VenueApiResponse }) => data),
+    () => axiosProv.get(`venue/${id}${user?.userRole === 'root' ? '?withExtendedInfo=true' : ''}`).then(({ data }: { data: VenueApiResponse }) => data),
     {
       enabled: id !== undefined && id !== '',
       keepPreviousData: true,
