@@ -12,7 +12,8 @@ const SecuritySocketContext = React.createContext<SecuritySocketContextReturn>({
 });
 
 export const SecuritySocketProvider = ({ children }: { children: React.ReactElement }) => {
-  const { token, isUserLoaded } = useAuth();
+  const { token, isUserLoaded, user } = useAuth();
+  const canSubscribe = isUserLoaded && user?.userRole === 'root' && !!token;
   const { addMessage, isOpen, webSocket, onStartWebSocket } = useSecurityStore((state) => ({
     addMessage: state.addMessage,
     isOpen: state.isWebSocketOpen,
@@ -36,13 +37,24 @@ export const SecuritySocketProvider = ({ children }: { children: React.ReactElem
 
   // useEffect for created the WebSocket and 'storing' it in useRef
   useEffect(() => {
-    if (isUserLoaded) {
+    useSecurityStore.getState().setNotificationsEnabled(canSubscribe);
+    if (canSubscribe) {
       onStartWebSocket(token ?? '');
     }
 
-    const wsCurrent = webSocket;
-    return () => wsCurrent?.close();
-  }, [isUserLoaded]);
+    return () => useSecurityStore.getState().setNotificationsEnabled(false);
+  }, [canSubscribe, token]);
+
+  // Scoped users refresh only active, successful queries; global notifications
+  // contain controller-wide data and cannot be subscribed to safely.
+  useEffect(() => {
+    if (!isUserLoaded || !token || user?.userRole === 'root') return undefined;
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      queryClient.refetchQueries({ type: 'active', predicate: (query) => query.state.status === 'success' });
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [isUserLoaded, token, user?.userRole, queryClient]);
 
   // useEffect for generating global notifications
   useEffect(() => {
@@ -70,7 +82,7 @@ export const SecuritySocketProvider = ({ children }: { children: React.ReactElem
           // If tab is active again, verify if browser killed the WS
           clearTimeout(timeoutId);
 
-          if (!isOpen && isUserLoaded) {
+          if (!isOpen && canSubscribe) {
             onStartWebSocket(token ?? '');
           }
         }
@@ -81,7 +93,7 @@ export const SecuritySocketProvider = ({ children }: { children: React.ReactElem
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [webSocket, isOpen]);
+  }, [webSocket, isOpen, canSubscribe, token]);
 
   const values: SecuritySocketContextReturn = useMemo(() => ({}), []);
 

@@ -20,6 +20,7 @@ import { NavLinkButton } from './NavLinkButton';
 import NestedNavButton from './NestedNavButton';
 import { useAuth } from 'contexts/AuthProvider';
 import { Route } from 'models/Routes';
+import { canAccessRoute } from 'helpers/userAccessPolicy';
 
 const variantChange = '0.2s linear';
 
@@ -65,7 +66,7 @@ export const Sidebar = ({ routes, isOpen, toggle, logo, version, topNav, childre
           <VStack spacing={2} alignItems="start" w="100%" px={4}>
             {topNav ? topNav(isRouteActive, toggle) : null}
             {routes
-              .filter(({ hidden, authorized }) => !hidden && authorized.includes(user?.userRole ?? ''))
+              .filter((route) => !route.hidden && canAccessRoute(user, route))
               .map((route) =>
                 route.children ? (
                   <NestedNavButton key={route.id} isActive={isRouteActive} route={route} />
@@ -89,7 +90,7 @@ export const Sidebar = ({ routes, isOpen, toggle, logo, version, topNav, childre
         </Box>
       </>
     ),
-    [user?.userRole, location, topNav, routes],
+    [user, location, topNav, routes],
   );
 
   return (

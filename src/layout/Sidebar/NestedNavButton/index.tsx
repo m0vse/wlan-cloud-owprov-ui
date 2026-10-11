@@ -14,6 +14,7 @@ import SubNavigationButton from './SubNavigationButton';
 import IconBox from 'components/IconBox';
 import { RouteGroup } from 'models/Routes';
 import { useAuth } from 'contexts/AuthProvider';
+import { canAccessRoute } from 'helpers/userAccessPolicy';
 
 const variantChange = '0.2s linear';
 
@@ -54,7 +55,7 @@ const NestedNavButton = ({ isActive, route }: Props) => {
       </AccordionButton>
       <AccordionPanel pl="18px" paddingEnd={0} pr="-18px">
         <Box pl={1} pr={-1} borderLeft="1px solid #63b3ed">
-          {route.children.filter(({ hidden, authorized }) => !hidden && authorized.includes(user?.userRole ?? '')).map((subRoute) => (
+          {route.children.filter((subRoute) => !subRoute.hidden && canAccessRoute(user, subRoute)).map((subRoute) => (
             <SubNavigationButton key={subRoute.path} route={subRoute} isActive={isActive} />
           ))}
         </Box>

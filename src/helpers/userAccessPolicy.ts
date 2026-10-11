@@ -54,3 +54,24 @@ export const grantPreset = (grant: AccessGrant) => ['viewer', 'editor', 'operato
   [...accessPreset(name)].sort().join(',') === [...grant.capabilities].sort().join(',')) ?? 'custom';
 export const canEditAccess = (actor: { id: string; userRole: string } | undefined,
   target: { id: string; userRole: string }) => actor?.userRole === 'root' && target.userRole !== 'root' && actor.id !== target.id;
+
+// Navigation eligibility only. Individual records and actions remain authorized
+// by the controller, including descendant scopes and device ownership.
+export const canAccessRoute = (user: { userRole: string; securityPolicy: string } | undefined,
+  route: { id: string; authorized: string[] }) => {
+  if (!user) return false;
+  if (user.userRole === 'root') return true;
+  const policy = parseAccessPolicy(user.securityPolicy ?? '');
+  if (user.userRole === 'subscriber' && !policy) return route.authorized.includes('subscriber');
+  if (route.id === 'account-page') return true;
+  if (!policy || policy.grants.length === 0) return false;
+  const capabilities = new Set(policy.grants.flatMap((grant) => grant.capabilities));
+  if (route.id === 'entity-page' || route.id === 'venue-page')
+    return editableAccessCapabilities.some(([capability]) => capabilities.has(capability));
+  const pageCapabilities: Record<string, string[]> = {
+    'inventory-page': ['devices.read', 'clients.read', 'configuration.push', 'devices.reboot', 'firmware.upgrade', 'diagnostics.read'],
+    'map-page': ['devices.read'],
+    'configuration-page': ['configuration.read', 'configuration.write', 'configuration.push'],
+  };
+  return (pageCapabilities[route.id] ?? []).some((capability) => capabilities.has(capability));
+};

@@ -15,6 +15,7 @@ import { useAuth } from 'contexts/AuthProvider';
 import { RouteName } from 'models/Routes';
 import NotFoundPage from 'pages/NotFound';
 import routes from 'router/routes';
+import { canAccessRoute } from 'helpers/userAccessPolicy';
 
 const Layout = () => {
   const { t } = useTranslation();
@@ -69,17 +70,19 @@ const Layout = () => {
 
     for (const route of routes) {
       // @ts-ignore
-      if (!route.children) instances.push(<Route path={route.path} element={<route.component />} key={route.id} />);
+      if (!route.children) instances.push(<Route path={route.path} element={canAccessRoute(authContext.user, route)
+        ? <route.component /> : <p>Access to this page is not assigned. Your account remains available from the profile menu.</p>} key={route.id} />);
       else {
         for (const child of route.children) {
           // @ts-ignore
-          instances.push(<Route path={child.path} element={<child.component />} key={child.id} />);
+          instances.push(<Route path={child.path} element={canAccessRoute(authContext.user, child)
+            ? <child.component /> : <p>Access to this page is not assigned.</p>} key={child.id} />);
         }
       }
     }
 
     return instances;
-  }, []);
+  }, [authContext.user]);
 
   const goToMap = () => navigate('/map');
 
@@ -106,10 +109,11 @@ const Layout = () => {
       <Navbar
         toggleSidebar={toggleSidebar}
         languageSwitcher={<LanguageSwitcher />}
-        favoritesButton={authContext.isUserLoaded ? <FavoritesDropdown /> : null}
+        favoritesButton={authContext.isUserLoaded && canAccessRoute(authContext.user, routes[0]) ? <FavoritesDropdown /> : null}
         rightElements={
           <Tooltip label="Map" aria-label={t('common.go_to_map')}>
             <IconButton
+              isDisabled={!canAccessRoute(authContext.user, { id: 'map-page', authorized: [] })}
               aria-label={t('common.go_to_map')}
               variant="ghost"
               icon={<MapTrifold size={24} />}

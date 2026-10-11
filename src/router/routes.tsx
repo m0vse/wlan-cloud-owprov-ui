@@ -66,13 +66,13 @@ const routes: Route[] = [
   },
   {
     id: 'logs-group',
-    authorized: ['root', 'partner', 'admin', 'csr', 'system'],
+    authorized: ['root'],
     name: 'controller.devices.logs',
     icon: () => <ListBullets size={28} weight="bold" />,
     children: [
       {
         id: 'logs-devices',
-        authorized: ['root', 'partner', 'admin', 'csr', 'system'],
+        authorized: ['root'],
         path: '/logs/notifications',
         name: 'venues.title',
         navName: (t) => `${t('venues.one')} ${t('notification.other')}`,
@@ -80,7 +80,7 @@ const routes: Route[] = [
       },
       {
         id: 'logs-prov',
-        authorized: ['root', 'partner', 'admin', 'csr', 'system'],
+        authorized: ['root'],
         path: '/logs/provisioning',
         name: 'controller.provisioning.title',
         navName: (t) => `${t('controller.provisioning.title')} ${t('controller.devices.logs')}`,
@@ -88,7 +88,7 @@ const routes: Route[] = [
       },
       {
         id: 'logs-security',
-        authorized: ['root', 'partner', 'admin', 'csr', 'system'],
+        authorized: ['root'],
         path: '/logs/security',
         name: 'logs.security',
         navName: (t) => `${t('logs.security')} ${t('controller.devices.logs')}`,
@@ -96,7 +96,7 @@ const routes: Route[] = [
       },
       {
         id: 'logs-firmware',
-        authorized: ['root', 'partner', 'admin', 'csr', 'system'],
+        authorized: ['root'],
         path: '/logs/firmware',
         name: 'logs.firmware',
         navName: (t) => `${t('logs.firmware')} ${t('controller.devices.logs')}`,
@@ -106,7 +106,7 @@ const routes: Route[] = [
   },
   {
     id: 'users-page',
-    authorized: ['root', 'partner', 'admin', 'csr', 'system'],
+    authorized: ['root'],
     path: '/users',
     name: 'users.title',
     icon: () => <UsersThree size={28} weight="bold" />,

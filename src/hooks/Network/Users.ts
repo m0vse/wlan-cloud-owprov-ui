@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { AtLeast } from 'models/General';
 import { Note } from 'models/Note';
 import { axiosSec } from 'utils/axiosInstances';
+import { useAuth } from 'contexts/AuthProvider';
 
 export type UserRole =
   | 'root'
@@ -128,11 +129,13 @@ const getUsers = async (queryClient: QueryClient) => {
 };
 
 export const useGetUsers = () => {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
   const queryClient = useQueryClient();
 
   return useQuery(['users'], () => getUsers(queryClient), {
+    enabled: user?.userRole === 'root',
     staleTime: 30 * 1000,
     onError: (e: AxiosError) => {
       if (!toast.isActive('users-fetching-error'))

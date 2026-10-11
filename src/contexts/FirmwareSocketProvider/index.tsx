@@ -13,7 +13,8 @@ const FirmwareSocketContext = React.createContext<FirmwareSocketContextReturn>({
 });
 
 export const FirmwareSocketProvider = ({ children }: { children: React.ReactElement }) => {
-  const { token, isUserLoaded } = useAuth();
+  const { token, isUserLoaded, user } = useAuth();
+  const canSubscribe = isUserLoaded && user?.userRole === 'root' && !!token;
   const { addMessage, isOpen, webSocket, onStartWebSocket } = useFirmwareStore((state) => ({
     addMessage: state.addMessage,
     isOpen: state.isWebSocketOpen,
@@ -37,13 +38,14 @@ export const FirmwareSocketProvider = ({ children }: { children: React.ReactElem
 
   // useEffect for created the WebSocket and 'storing' it in useRef
   useEffect(() => {
-    if (isUserLoaded && axiosFms?.defaults?.baseURL !== axiosSec?.defaults?.baseURL) {
+    const enabled = canSubscribe && axiosFms?.defaults?.baseURL !== axiosSec?.defaults?.baseURL;
+    useFirmwareStore.getState().setNotificationsEnabled(enabled);
+    if (enabled) {
       onStartWebSocket(token ?? '');
     }
 
-    const wsCurrent = webSocket;
-    return () => wsCurrent?.close();
-  }, [isUserLoaded]);
+    return () => useFirmwareStore.getState().setNotificationsEnabled(false);
+  }, [canSubscribe, token]);
 
   // useEffect for generating global notifications
   useEffect(() => {
@@ -71,7 +73,7 @@ export const FirmwareSocketProvider = ({ children }: { children: React.ReactElem
           // If tab is active again, verify if browser killed the WS
           clearTimeout(timeoutId);
 
-          if (!isOpen && isUserLoaded && axiosFms?.defaults?.baseURL !== axiosSec?.defaults?.baseURL) {
+          if (!isOpen && canSubscribe && axiosFms?.defaults?.baseURL !== axiosSec?.defaults?.baseURL) {
             onStartWebSocket(token ?? '');
           }
         }
@@ -82,7 +84,7 @@ export const FirmwareSocketProvider = ({ children }: { children: React.ReactElem
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [webSocket, isOpen]);
+  }, [webSocket, isOpen, canSubscribe, token]);
 
   const values: FirmwareSocketContextReturn = useMemo(() => ({}), []);
 

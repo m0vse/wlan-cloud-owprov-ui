@@ -84,6 +84,9 @@ export type ProvisioningStoreState = {
   webSocket?: WebSocket;
   send: (str: string) => void;
   startWebSocket: (token: string, tries?: number) => void;
+  notificationsEnabled: boolean;
+  retryTimer?: ReturnType<typeof setTimeout>;
+  setNotificationsEnabled: (enabled: boolean) => void;
   isWebSocketOpen: boolean;
   setWebSocketOpen: (isOpen: boolean) => void;
   lastSearchResults: string[];
@@ -166,12 +169,21 @@ export const useProvisioningStore = create<ProvisioningStoreState>((set, get) =>
   addEventListeners: (events: SocketEventCallback[]) =>
     set((state) => ({ eventListeners: [...state.eventListeners, ...events] })),
   isWebSocketOpen: false,
+  notificationsEnabled: false,
+  setNotificationsEnabled: (enabled) => {
+    clearTimeout(get().retryTimer);
+    const socket = get().webSocket;
+    if (socket) { socket.onclose = null; socket.close(); }
+    set({ notificationsEnabled: enabled, webSocket: undefined, isWebSocketOpen: false,
+      retryTimer: undefined, allMessages: [], lastMessage: undefined, availableLogTypes: [], eventListeners: [], lastSearchResults: [], errors: [] });
+  },
   setWebSocketOpen: (isOpen: boolean) => set({ isWebSocketOpen: isOpen }),
   send: (str: string) => {
     const ws = get().webSocket;
     if (ws) ws.send(str);
   },
   startWebSocket: (token: string, tries = 0) => {
+    if (!get().notificationsEnabled || !token) return;
     const newTries = tries + 1;
     if (tries <= 10) {
       set({
@@ -189,7 +201,7 @@ export const useProvisioningStore = create<ProvisioningStoreState>((set, get) =>
         };
         ws.onclose = () => {
           set({ isWebSocketOpen: false });
-          setTimeout(() => get().startWebSocket(token, newTries), 3000);
+          set({ retryTimer: setTimeout(() => get().startWebSocket(token, newTries), 3000) });
         };
       }
     }
