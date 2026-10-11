@@ -16,6 +16,7 @@ const { createRoot } = require('react-dom/client');
 const { act } = require('react-dom/test-utils');
 const { ChakraProvider } = require('@chakra-ui/react');
 const { QueryClient, QueryClientProvider } = require('@tanstack/react-query');
+const { MemoryRouter } = require('react-router-dom');
 const siteId = '11111111-1111-4111-8111-111111111111';
 const foreignId = '22222222-2222-4222-8222-222222222222';
 let actor = { id: 'synthetic-user', userRole: 'noc' }, calls = [], table;
@@ -70,7 +71,8 @@ const render = async (Card) => {
   if (root) { await settle(() => root.unmount()); client.clear(); }
   document.body.innerHTML = ''; container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container);
   client = new QueryClient({ defaultOptions: { queries: { retry: false } }, logger: { log() {}, warn() {}, error() {} } });
-  await settle(() => root.render(React.createElement(ChakraProvider, null, React.createElement(QueryClientProvider, { client }, React.createElement(Card, { id: siteId })))));
+  await settle(() => root.render(React.createElement(ChakraProvider, null, React.createElement(QueryClientProvider, { client },
+    React.createElement(MemoryRouter, null, React.createElement(Card, { id: siteId }))))));
   for (let i = 0; i < 6 && !container.textContent.includes('Owned AP 0'); ++i) await settle();
 };
 let checks = 0;
