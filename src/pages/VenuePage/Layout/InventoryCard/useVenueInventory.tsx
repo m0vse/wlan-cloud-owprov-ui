@@ -14,7 +14,8 @@ export const useVenueInventory = ({ venueId }: Props) => {
   const [pageInfo, setPageInfo] = React.useState<PageInfo>();
   const getVenue = useGetVenue({ id: venueId });
   const selectedTags = useGetSelectInventoryPaginated({ pageInfo, serialNumbers: getVenue.data?.devices ?? [], enabled: root });
-  const scopedTags = useScopedSiteInventory({ scopeType: 'venue', scopeId: venueId, pageInfo, enabled: !root && !!getVenue.data });
+  const scopedTags = useScopedSiteInventory({ scopeType: 'venue', scopeId: venueId, pageInfo,
+    enabled: !root && getVenue.data?.id === venueId && !getVenue.isPreviousData });
   const getTags = root ? selectedTags : scopedTags;
 
   return {

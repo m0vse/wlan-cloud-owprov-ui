@@ -14,7 +14,8 @@ export const useEntityInventory = ({ entityId }: Props) => {
   const [pageInfo, setPageInfo] = React.useState<PageInfo>();
   const getEntity = useGetEntity({ id: entityId });
   const selectedTags = useGetSelectInventoryPaginated({ pageInfo, serialNumbers: getEntity.data?.devices ?? [], enabled: root });
-  const scopedTags = useScopedSiteInventory({ scopeType: 'entity', scopeId: entityId, pageInfo, enabled: !root && !!getEntity.data });
+  const scopedTags = useScopedSiteInventory({ scopeType: 'entity', scopeId: entityId, pageInfo,
+    enabled: !root && getEntity.data?.id === entityId && !getEntity.isPreviousData });
   const getTags = root ? selectedTags : scopedTags;
 
   return {
