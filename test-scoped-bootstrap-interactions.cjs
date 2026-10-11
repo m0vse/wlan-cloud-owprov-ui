@@ -102,7 +102,8 @@ const check = (condition, label) => { assert.ok(condition, label); ++checks; };
   check(sockets.length === 3 && auth.token === 'isolated-test-token', 'visibility change cannot reopen denied socket or logout');
   const interceptor = transports.axiosSec.interceptors.response.handlers[0].rejected;
   localStorage.setItem('access_token', 'isolated-test-token');
-  const denial = { response: { status: 403, data: { ErrorCode: 1006, ErrorDescription: 'Access denied' } } };
+  // ow_constants.h defines ACCESS_DENIED=7, INVALID_TOKEN=8, EXPIRED_TOKEN=9.
+  const denial = { response: { status: 403, data: { ErrorCode: 7, ErrorDescription: 'Access denied' } } };
   await interceptor(denial).catch(() => {});
   check(localStorage.getItem('access_token') === 'isolated-test-token' && window.location.pathname === '/', 'ordinary permission denial does not revoke session');
   await settle(() => root.unmount()); client.clear();
