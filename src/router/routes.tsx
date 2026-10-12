@@ -132,9 +132,9 @@ const routes: Route[] = [
         id: 'system-email',
         authorized: ['root'],
         path: '/emailSettings',
-        name: 'RAW-Email / SMTP settings',
-        label: 'Email / SMTP settings',
-        navName: () => 'Email / SMTP settings',
+        name: 'RAW-Email',
+        label: 'Email',
+        navName: () => 'Email',
         component: EmailSettingsPage,
       },
       {

@@ -4,7 +4,7 @@ import { Alert, AlertIcon, Box, Button, FormControl, FormErrorMessage, FormLabel
 import { Form, Formik } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from 'contexts/AuthProvider';
-import { EmailSettings, EmailSettingsUpdate, useEmailSettings, useUpdateEmailSettings } from 'hooks/Network/EmailSettings';
+import { EmailSettings, EmailSettingsUpdate, useEmailSettings, useUpdateEmailSettings, useTestEmailSettings } from 'hooks/Network/EmailSettings';
 
 type Values = {
   enabledChoice: string; host: string; port: string; tlsMode: string; sender: string;
@@ -40,16 +40,18 @@ const schema = (passwordSet: boolean) => Yup.object({
 const EmailSettingsForm = () => {
   const settings = useEmailSettings();
   const update = useUpdateEmailSettings();
+  const test = useTestEmailSettings();
+  const [recipient, setRecipient] = React.useState('');
   const [saved, setSaved] = React.useState(false);
   if (settings.isLoading) return <Spinner aria-label="Loading email settings" />;
   if (settings.isError || !settings.data) return <Alert status="error"><AlertIcon />Email settings could not be loaded.</Alert>;
   return (
     <Box borderWidth="1px" borderRadius="md" p={6}>
-      <Heading size="md" mb={4}>Email / SMTP settings</Heading>
+      <Heading size="md" mb={4}>Email</Heading>
       <Text mb={4}>Configure the mail server and sender used for system email.</Text>
       <Formik initialValues={initialValues(settings.data)} enableReinitialize validationSchema={schema(settings.data.passwordSet)}
         onSubmit={async (values, { resetForm }) => {
-          setSaved(false);
+          setSaved(false); test.reset();
           const payload: EmailSettingsUpdate = {
             enabled: values.enabledChoice === 'enabled', host: values.host, port: Number(values.port),
             tlsMode: values.tlsMode as EmailSettingsUpdate['tlsMode'], sender: values.sender,
@@ -99,6 +101,20 @@ const EmailSettingsForm = () => {
               {update.isError && <Alert status="error" mt={3}><AlertIcon />Email settings could not be saved. Check the entries and try again.</Alert>}
               {saved && <Alert status="success" mt={3}><AlertIcon />Email settings saved.</Alert>}
               <Button type="submit" colorScheme="blue" mt={4} isLoading={isSubmitting} isDisabled={!dirty || isSubmitting}>Save email settings</Button>
+              <Box mt={6}>
+                <FormControl>
+                  <FormLabel htmlFor="smtp-test-recipient">Test recipient</FormLabel>
+                  <Input id="smtp-test-recipient" aria-label="Test recipient" type="email" value={recipient}
+                    isDisabled={test.isLoading} onChange={(event) => { setRecipient(event.target.value); test.reset(); }} />
+                </FormControl>
+                <Button type="button" mt={3} isLoading={test.isLoading}
+                  isDisabled={dirty || isSubmitting || test.isLoading || !settings.data?.enabled || !settings.data?.configured ||
+                    !Yup.string().email().required().isValidSync(recipient.trim())}
+                  onClick={() => test.mutate(recipient.trim())}>Send test email</Button>
+                {dirty && <Text mt={2}>Save changes before testing.</Text>}
+                {test.isSuccess && <Alert status="success" mt={3}><AlertIcon />SMTP accepted the test email. Check your inbox.</Alert>}
+                {test.isError && <Alert status="error" mt={3}><AlertIcon />Test email failed. Check your saved SMTP settings.</Alert>}
+              </Box>
             </Form>
           );
         }}

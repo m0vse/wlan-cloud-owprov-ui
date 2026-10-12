@@ -16,13 +16,19 @@ const { createRoot } = require('react-dom/client');
 const { act, Simulate } = require('react-dom/test-utils');
 const { ChakraProvider } = require('@chakra-ui/react');
 const { QueryClient, QueryClientProvider } = require('@tanstack/react-query');
-let actor = { id: 'root-smtp', userRole: 'root' }, gets = 0, puts = [], fail = false;
+let actor = { id: 'root-smtp', userRole: 'root' }, gets = 0, puts = [], posts = [], fail = false, testFail = false, releaseTest;
 const empty = { configured: false, enabled: false, host: '', port: null, tlsMode: '', sender: '', username: '', authMethod: '', passwordSet: false };
 let stored = { ...empty };
 const originalLoad = Module._load;
 Module._load = function (name, parent, isMain) {
   if (name === 'contexts/AuthProvider') return { useAuth: () => ({ user: actor }) };
   if (name === 'utils/axiosInstances') return { axiosSec: {
+    post: async (url, payload) => {
+      assert.equal(url, 'emailSettings'); posts.push(payload);
+      if (releaseTest) await new Promise((resolve) => { releaseTest = resolve; });
+      if (testFail) throw { response: { data: { ErrorDescription: 'server-secret-never-returned-to-form' } } };
+      return { data: { accepted: true } };
+    },
     get: async (url) => { assert.equal(url, 'emailSettings'); ++gets; return { data: { ...stored, password: 'server-secret-never-returned-to-form' } }; },
     put: async (url, payload) => {
       assert.equal(url, 'emailSettings'); puts.push(payload);
@@ -68,12 +74,27 @@ const check = (condition, label) => { assert.ok(condition, label); ++checks; };
   check(puts[0].passwordAction === 'set' && puts[0].password === 'synthetic-smtp-secret', 'password sent only as deliberate replacement');
   check(!find('password') && find('passwordAction').value === 'retain' && !container.innerHTML.includes('synthetic-smtp-secret'), 'successful save clears replacement password');
   check(container.textContent.includes('A password is stored.'), 'only stored-password indicator shown');
+  const testButton = () => [...container.querySelectorAll('button')].find((button) => button.textContent.includes('Send test email'));
+  check(find('Test recipient').value === '' && testButton().disabled, 'test recipient blank and required');
+  await change('Test recipient', 'not an email'); check(testButton().disabled, 'invalid test recipient disabled');
+  await change('Test recipient', 'operator@example.invalid');
+  releaseTest = true;
+  await settle(() => Simulate.click(testButton()));
+  check(testButton().disabled && posts.length === 1, 'pending send disabled');
+  check(JSON.stringify(posts[0]) === JSON.stringify({ recipient: 'operator@example.invalid' }), 'test sends only recipient, no credentials');
+  await settle(() => { const resolve = releaseTest; releaseTest = undefined; resolve(); });
+  check(container.textContent.includes('SMTP accepted the test email.'), 'success describes SMTP acceptance, not inbox delivery');
+  testFail = true; await settle(() => Simulate.click(testButton()));
+  check(container.textContent.includes('Test email failed.') && !container.textContent.includes('server-secret'), 'test failure shown without server details');
+  await change('host', 'edited.example.invalid'); check(testButton().disabled && container.textContent.includes('Save changes before testing.'), 'unsaved configuration cannot be tested');
+  await change('host', 'smtp.example.invalid'); testFail = false;
   await change('sender', 'updated@example.invalid'); await submit();
   check(puts.at(-1).passwordAction === 'retain' && !Object.hasOwn(puts.at(-1), 'password') && stored.passwordSet, 'ordinary save retains secret without resending it');
   await change('passwordAction', 'clear'); const beforeClear = puts.length; await submit();
   check(puts.length === beforeClear && container.textContent.includes('Disable SMTP or authentication'), 'enabled authenticated password clearing rejected');
   await change('enabledChoice', 'disabled'); await submit();
   check(puts.at(-1).enabled === false && puts.at(-1).passwordAction === 'clear' && !stored.passwordSet, 'explicit disabled password clearing saved');
+  check(testButton().disabled, 'disabled SMTP cannot be tested');
   await change('port', '65536'); const beforeInvalid = puts.length; await submit(); check(puts.length === beforeInvalid, 'out-of-range port blocked');
   await change('port', '2525'); await change('sender', 'not an email'); await submit(); check(puts.length === beforeInvalid, 'invalid sender blocked');
   await change('sender', 'final@example.invalid'); fail = true; await submit();

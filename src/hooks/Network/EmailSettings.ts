@@ -36,3 +36,14 @@ export const useUpdateEmailSettings = () => {
     catch { throw new Error('Email settings could not be saved. Check the entries and try again.'); }
   }, { onSuccess: (data) => client.setQueryData(['email-settings', user?.id], data) });
 };
+
+export const useTestEmailSettings = () => {
+  const { user } = useAuth();
+  return useMutation(async (recipient: string) => {
+    if (user?.userRole !== 'root') throw new Error('Administrator access is required.');
+    try {
+      const response = await axiosSec.post('emailSettings', { recipient });
+      if (response.data.accepted !== true) throw new Error('Not accepted');
+    } catch { throw new Error('Test email failed. Check your saved SMTP settings.'); }
+  }, { retry: false });
+};
