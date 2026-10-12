@@ -1,19 +1,25 @@
 import React from 'react';
-import { Alert, AlertIcon, Box, Button, FormControl, FormErrorMessage, FormLabel, Heading,
-  Input, Select, SimpleGrid, Spinner, Text } from '@chakra-ui/react';
+import { Alert, AlertIcon, Box, Button, FormControl, FormErrorMessage, FormLabel, Heading, HStack,
+  Input, Select, SimpleGrid, Spacer, Spinner, Text } from '@chakra-ui/react';
 import { Form, Formik } from 'formik';
 import * as Yup from 'yup';
 import { useAuth } from 'contexts/AuthProvider';
+import Card from 'components/Card';
+import CardHeader from 'components/Card/CardHeader';
+import CardBody from 'components/Card/CardBody';
+import SaveButton from 'components/Buttons/SaveButton';
+import ToggleEditButton from 'components/Buttons/ToggleEditButton';
 import { EmailSettings, EmailSettingsUpdate, useEmailSettings, useUpdateEmailSettings, useTestEmailSettings } from 'hooks/Network/EmailSettings';
 
 type Values = {
-  enabledChoice: string; host: string; port: string; tlsMode: string; sender: string;
+  enabledChoice: string; host: string; port: string; tlsMode: string; sender: string; senderName: string;
   username: string; authMethod: string; passwordAction: 'retain' | 'set' | 'clear'; password: string;
 };
 const initialValues = (settings: EmailSettings): Values => ({
   enabledChoice: settings.configured ? (settings.enabled ? 'enabled' : 'disabled') : '',
   host: settings.configured ? settings.host : '', port: settings.configured && settings.port !== null ? String(settings.port) : '',
   tlsMode: settings.configured ? settings.tlsMode : '', sender: settings.configured ? settings.sender : '',
+  senderName: settings.configured ? settings.senderName ?? '' : '',
   username: settings.configured ? settings.username : '', authMethod: settings.configured ? settings.authMethod : '',
   passwordAction: 'retain', password: '',
 });
@@ -24,6 +30,7 @@ const schema = (passwordSet: boolean) => Yup.object({
     (value) => !!value && /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 65535),
   tlsMode: Yup.string().oneOf(['none', 'starttls', 'implicit'], 'Choose a TLS mode.').required('Choose a TLS mode.'),
   sender: Yup.string().email('Enter a valid sender email address.').required('Enter the sender email address.'),
+  senderName: Yup.string().max(255, 'Use at most 255 characters.').matches(/^[^\x00-\x1f\x7f<>]*$/, 'Enter a name without line breaks or angle brackets.'),
   authMethod: Yup.string().oneOf(['none', 'login', 'plain', 'cram-md5'], 'Choose an authentication method.').required('Choose an authentication method.'),
   username: Yup.string().test('username', 'Enter the SMTP username.', function (value) {
     return !(this.parent.enabledChoice === 'enabled' && this.parent.authMethod !== 'none') || !!value;
@@ -43,18 +50,17 @@ const EmailSettingsForm = () => {
   const test = useTestEmailSettings();
   const [recipient, setRecipient] = React.useState('');
   const [saved, setSaved] = React.useState(false);
+  const [editing, setEditing] = React.useState(false);
   if (settings.isLoading) return <Spinner aria-label="Loading email settings" />;
   if (settings.isError || !settings.data) return <Alert status="error"><AlertIcon />Email settings could not be loaded.</Alert>;
   return (
-    <Box borderWidth="1px" borderRadius="md" p={6}>
-      <Heading size="md" mb={4}>Email</Heading>
-      <Text mb={4}>Configure the mail server and sender used for system email.</Text>
       <Formik initialValues={initialValues(settings.data)} enableReinitialize validationSchema={schema(settings.data.passwordSet)}
         onSubmit={async (values, { resetForm }) => {
+          if (!editing || test.isLoading) return;
           setSaved(false); test.reset();
           const payload: EmailSettingsUpdate = {
             enabled: values.enabledChoice === 'enabled', host: values.host, port: Number(values.port),
-            tlsMode: values.tlsMode as EmailSettingsUpdate['tlsMode'], sender: values.sender,
+            tlsMode: values.tlsMode as EmailSettingsUpdate['tlsMode'], sender: values.sender, senderName: values.senderName,
             username: values.username, authMethod: values.authMethod as EmailSettingsUpdate['authMethod'],
             passwordAction: values.passwordAction,
             ...(values.passwordAction === 'set' ? { password: values.password } : {}),
@@ -63,9 +69,10 @@ const EmailSettingsForm = () => {
             const response = await update.mutateAsync(payload);
             resetForm({ values: initialValues(response) });
             setSaved(true);
+            setEditing(false);
           } catch { /* A generic message below avoids echoing request credentials. */ }
         }}>
-        {({ values, errors, touched, handleChange, handleBlur, isSubmitting, dirty }) => {
+        {({ values, errors, touched, handleChange, handleBlur, isSubmitting, dirty, isValid, submitForm, resetForm }) => {
           const field = (name: keyof Values, label: string, input: React.ReactElement) => (
             <FormControl isInvalid={!!touched[name] && !!errors[name]}>
               <FormLabel htmlFor={`smtp-${name}`}>{label}</FormLabel>{input}
@@ -73,9 +80,22 @@ const EmailSettingsForm = () => {
             </FormControl>
           );
           const props = (name: keyof Values) => ({ id: `smtp-${name}`, name, 'aria-label': name, value: values[name],
-            onChange: handleChange, onBlur: handleBlur, isDisabled: isSubmitting });
+            onChange: handleChange, onBlur: handleBlur, isDisabled: !editing || isSubmitting || test.isLoading });
           return (
             <Form autoComplete="off">
+              <Card>
+                <CardHeader>
+                  <Heading size="md" my="auto">Email</Heading>
+                  <Spacer />
+                  <HStack spacing={2}>
+                    <SaveButton type="button" onClick={submitForm} hidden={!editing} isLoading={isSubmitting}
+                      isDisabled={!editing || !dirty || !isValid || test.isLoading} />
+                    <ToggleEditButton isEditing={editing} isDirty={dirty} isDisabled={isSubmitting || test.isLoading}
+                      toggleEdit={() => { resetForm(); update.reset(); setSaved(false); setEditing(!editing); }} />
+                  </HStack>
+                </CardHeader>
+                <CardBody>
+                <Box w="100%">
               <SimpleGrid columns={[1, 2]} spacing={4}>
                 {field('enabledChoice', 'Email delivery', <Select {...props('enabledChoice')}>
                   <option value="">Choose enabled or disabled</option><option value="enabled">Enabled</option><option value="disabled">Disabled</option>
@@ -85,7 +105,8 @@ const EmailSettingsForm = () => {
                 {field('tlsMode', 'TLS mode', <Select {...props('tlsMode')}>
                   <option value="">Choose TLS mode</option><option value="none">None</option><option value="starttls">STARTTLS</option><option value="implicit">Implicit TLS</option>
                 </Select>)}
-                {field('sender', 'Sender email address', <Input {...props('sender')} type="email" />)}
+                {field('senderName', 'From name', <Input {...props('senderName')} />)}
+                {field('sender', 'From address', <Input {...props('sender')} type="email" />)}
                 {field('authMethod', 'Authentication', <Select {...props('authMethod')}>
                   <option value="">Choose authentication</option><option value="none">No authentication</option>
                   <option value="login">LOGIN</option><option value="plain">PLAIN</option><option value="cram-md5">CRAM-MD5</option>
@@ -100,7 +121,6 @@ const EmailSettingsForm = () => {
               {touched.password && errors.password && values.passwordAction !== 'set' && <Alert status="error" mt={3}><AlertIcon />{errors.password}</Alert>}
               {update.isError && <Alert status="error" mt={3}><AlertIcon />Email settings could not be saved. Check the entries and try again.</Alert>}
               {saved && <Alert status="success" mt={3}><AlertIcon />Email settings saved.</Alert>}
-              <Button type="submit" colorScheme="blue" mt={4} isLoading={isSubmitting} isDisabled={!dirty || isSubmitting}>Save email settings</Button>
               <Box mt={6}>
                 <FormControl>
                   <FormLabel htmlFor="smtp-test-recipient">Test recipient</FormLabel>
@@ -115,11 +135,13 @@ const EmailSettingsForm = () => {
                 {test.isSuccess && <Alert status="success" mt={3}><AlertIcon />SMTP accepted the test email. Check your inbox.</Alert>}
                 {test.isError && <Alert status="error" mt={3}><AlertIcon />Test email failed. Check your saved SMTP settings.</Alert>}
               </Box>
+                </Box>
+                </CardBody>
+              </Card>
             </Form>
           );
         }}
       </Formik>
-    </Box>
   );
 };
 

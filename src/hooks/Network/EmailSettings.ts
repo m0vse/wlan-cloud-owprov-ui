@@ -4,7 +4,7 @@ import { axiosSec } from 'utils/axiosInstances';
 
 export type EmailSettings = {
   configured: boolean; enabled: boolean; host: string; port: number | null;
-  tlsMode: '' | 'none' | 'starttls' | 'implicit'; sender: string; username: string;
+  tlsMode: '' | 'none' | 'starttls' | 'implicit'; sender: string; senderName: string; username: string;
   authMethod: '' | 'none' | 'login' | 'plain' | 'cram-md5'; passwordSet: boolean;
 };
 export type EmailSettingsUpdate = Omit<EmailSettings, 'configured' | 'passwordSet'> & {
@@ -14,7 +14,7 @@ export type EmailSettingsUpdate = Omit<EmailSettings, 'configured' | 'passwordSe
 // Copy only public fields: credentials are never echoed into query state.
 const publicSettings = (data: EmailSettings): EmailSettings => ({
   configured: data.configured, enabled: data.enabled, host: data.host, port: data.port,
-  tlsMode: data.tlsMode, sender: data.sender, username: data.username,
+  tlsMode: data.tlsMode, sender: data.sender, senderName: data.senderName ?? '', username: data.username,
   authMethod: data.authMethod, passwordSet: data.passwordSet,
 });
 
