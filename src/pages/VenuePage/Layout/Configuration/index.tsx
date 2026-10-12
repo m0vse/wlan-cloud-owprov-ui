@@ -24,6 +24,7 @@ import CreateConfigurationModal from 'components/Tables/ConfigurationTable/Creat
 import { useGetSelectConfigurations } from 'hooks/Network/Configurations';
 import { useGetVenue } from 'hooks/Network/Venues';
 import { Configuration } from 'models/Configuration';
+import { useAuth } from 'contexts/AuthProvider';
 
 type Props = {
   id: string;
@@ -31,6 +32,7 @@ type Props = {
 
 const VenueConfigurationsCard = ({ id }: Props) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [isList, setIsList] = useBoolean(false);
   const getVenue = useGetVenue({ id });
   const getConfigurations = useGetSelectConfigurations({ select: getVenue.data?.configurations ?? [] });
@@ -90,7 +92,7 @@ const VenueConfigurationsCard = ({ id }: Props) => {
               onClick={setIsList.on}
             />
           </Tooltip>
-          <CreateConfigurationModal entityId={`venue:${id}`} refresh={getVenue.refetch} />
+          {user?.userRole === 'root' && <CreateConfigurationModal entityId={`venue:${id}`} refresh={getVenue.refetch} />}
         </HStack>
       </CardHeader>
       <CardBody>

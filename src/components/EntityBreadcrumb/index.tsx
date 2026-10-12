@@ -12,6 +12,7 @@ import {
   useDisclosure,
 } from '@chakra-ui/react';
 import { TreeEntity, TreeVenue, useGetEntityTree } from 'hooks/Network/Entity';
+import { useAuth } from 'contexts/AuthProvider';
 
 const traverseTreeToFindId = (tree: TreeEntity, desiredId: string) => {
   const traverse: (node: TreeEntity | TreeVenue) => null | (TreeEntity | TreeVenue)[] = (node) => {
@@ -42,7 +43,7 @@ const traverseTreeToFindId = (tree: TreeEntity, desiredId: string) => {
 type Props = {
   id: string;
 };
-const EntityBreadcrumb = ({ id }: Props) => {
+const RootEntityBreadcrumb = ({ id }: Props) => {
   const menuProps = useDisclosure();
   const getEntityTree = useGetEntityTree();
 
@@ -115,4 +116,8 @@ const EntityBreadcrumb = ({ id }: Props) => {
   );
 };
 
+const EntityBreadcrumb = ({ id }: Props) => {
+  const { user } = useAuth();
+  return user?.userRole === 'root' ? <RootEntityBreadcrumb id={id} /> : <Text fontSize="sm">Assigned site</Text>;
+};
 export default EntityBreadcrumb;

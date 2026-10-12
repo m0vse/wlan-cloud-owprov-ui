@@ -28,9 +28,11 @@ import FormattedDate from 'components/FormattedDate';
 import { useGetVenue, useUpdateVenue } from 'hooks/Network/Venues';
 import { Note } from 'models/Note';
 import { Column } from 'models/Table';
+import { useAuth } from 'contexts/AuthProvider';
 
 const VenueNotes = ({ id }: { id: string }) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const getVenue = useGetVenue({ id });
   const [newNote, setNewNote] = React.useState('');
   const updateVenue = useUpdateVenue({ id });
@@ -116,7 +118,7 @@ const VenueNotes = ({ id }: { id: string }) => {
           {t('common.notes')}
         </Heading>
         <Spacer />
-        <Popover trigger="click" placement="auto">
+        {user?.userRole === 'root' && <Popover trigger="click" placement="auto">
           {({ onClose }) => (
             <>
               <PopoverTrigger>
@@ -148,7 +150,7 @@ const VenueNotes = ({ id }: { id: string }) => {
               </PopoverContent>
             </>
           )}
-        </Popover>
+        </Popover>}
       </CardHeader>
       <CardBody display="block">
         <Box overflow="auto" h="300px">

@@ -9,6 +9,7 @@ import VenueInventoryCard from './InventoryCard';
 import VenueMonitoringTab from './Monitoring';
 import VenueResourcesCard from './Resources';
 import VenueNotes from './VenueNotes';
+import { useAuth } from 'contexts/AuthProvider';
 
 const SETTING = 'provisioning.venue.tabIndex';
 
@@ -39,6 +40,8 @@ type Props = {
 };
 
 const VenuePageLayout = ({ id, hasAnalytics }: Props) => {
+  const { user } = useAuth();
+  const isRoot = user?.userRole === 'root';
   const [tabIndex, setTabIndex] = React.useState(getDefaultTabIndex(hasAnalytics));
   const { colorMode } = useColorMode();
   const isLight = colorMode === 'light';
@@ -90,10 +93,10 @@ const VenuePageLayout = ({ id, hasAnalytics }: Props) => {
             columnClassName="my-masonry-grid_column"
           >
             <VenueDetailsCard id={id} />
-            <VenueBehaviorsCard id={id} />
+            {isRoot && <VenueBehaviorsCard id={id} />}
             <VenueInventoryCard id={id} />
             <VenueConfigurationsCard id={id} />
-            <VenueResourcesCard id={id} />
+            {isRoot && <VenueResourcesCard id={id} />}
             <VenueContactsCard id={id} />
             <VenueNotes id={id} />
           </Masonry>

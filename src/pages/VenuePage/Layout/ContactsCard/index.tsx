@@ -11,6 +11,7 @@ import {
   Spacer,
   Spinner,
   Tooltip,
+  Text,
   useBoolean,
   useDisclosure,
 } from '@chakra-ui/react';
@@ -30,6 +31,7 @@ import { useGetSelectContacts } from 'hooks/Network/Contacts';
 import { TreeEntity, TreeVenue, useGetEntityTree } from 'hooks/Network/Entity';
 import { useAddVenueContact, useGetVenue } from 'hooks/Network/Venues';
 import { ContactObj } from 'models/Contact';
+import { useAuth } from 'contexts/AuthProvider';
 
 const traverseTreeToFindId = (tree: TreeEntity, desiredId: string) => {
   const traverse: (node: TreeEntity | TreeVenue) => null | (TreeEntity | TreeVenue)[] = (node) => {
@@ -61,7 +63,7 @@ type Props = {
   id: string;
 };
 
-const VenueContactsCard = ({ id }: Props) => {
+const RootVenueContactsCard = ({ id }: Props) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [isList, setIsList] = useBoolean(false);
@@ -173,4 +175,9 @@ const VenueContactsCard = ({ id }: Props) => {
   );
 };
 
+const VenueContactsCard = ({ id }: Props) => {
+  const { user } = useAuth();
+  return user?.userRole === 'root' ? <RootVenueContactsCard id={id} /> : <Card><CardHeader><Heading size="md">Contacts</Heading></CardHeader>
+    <CardBody><Text>Contact details are not available in this scoped view.</Text></CardBody></Card>;
+};
 export default VenueContactsCard;

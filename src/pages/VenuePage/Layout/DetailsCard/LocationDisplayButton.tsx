@@ -1,19 +1,21 @@
 import * as React from 'react';
-import { Box, Heading, Icon, Tooltip, useColorModeValue, useDisclosure } from '@chakra-ui/react';
+import { Box, Heading, Icon, Text, Tooltip, useColorModeValue, useDisclosure } from '@chakra-ui/react';
 import { Wrapper } from '@googlemaps/react-wrapper';
 import { Globe } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { GoogleMap } from 'components/GoogleMap';
 import { GoogleMapMarker } from 'components/GoogleMap/Marker';
 import { Modal } from 'components/Modals/Modal';
-import { useGetLocation } from 'hooks/Network/Locations';
+import { useGetLocation, useGetVenueLocation } from 'hooks/Network/Locations';
 import { useGetSystemSecret } from 'hooks/Network/Secrets';
+import { useAuth } from 'contexts/AuthProvider';
 
 type Props = {
   locationId: string;
+  venueId?: string;
 };
 
-const LocationDisplayButton = ({ locationId }: Props) => {
+const RootLocationDisplayButton = ({ locationId }: Props) => {
   const { t } = useTranslation();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const getGoogleApiKey = useGetSystemSecret({ secret: 'google.maps.apikey' });
@@ -69,4 +71,16 @@ const LocationDisplayButton = ({ locationId }: Props) => {
   );
 };
 
+const ScopedLocationDisplay = ({ locationId, venueId }: Props) => {
+  const location = useGetVenueLocation({ id: locationId, venueId });
+  if (!locationId) return <Text>No location assigned.</Text>;
+  if (location.isError || !location.data) return <Text>Location reference: {locationId}. Details are not available.</Text>;
+  return <Box><Text>{location.data.name}</Text><Text fontSize="sm">{[
+    ...(location.data.addressLines ?? []), location.data.city, location.data.state, location.data.postal, location.data.country,
+  ].filter(Boolean).join(', ')}</Text></Box>;
+};
+const LocationDisplayButton = ({ locationId, venueId }: Props) => {
+  const { user } = useAuth();
+  return user?.userRole === 'root' ? <RootLocationDisplayButton locationId={locationId} /> : <ScopedLocationDisplay locationId={locationId} venueId={venueId} />;
+};
 export default LocationDisplayButton;

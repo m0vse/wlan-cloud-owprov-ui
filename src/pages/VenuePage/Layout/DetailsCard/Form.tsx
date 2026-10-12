@@ -7,6 +7,7 @@ import LocationPickerCreator from 'components/CreateObjectsForms/LocationPickerC
 import FormattedDate from 'components/FormattedDate';
 import StringField from 'components/FormFields/StringField';
 import { VenueApiResponse } from 'models/Venue';
+import { useAuth } from 'contexts/AuthProvider';
 
 type Props = {
   isDisabled: boolean;
@@ -15,6 +16,7 @@ type Props = {
 
 const VenueDetailsForm = ({ isDisabled, venue }: Props) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   return (
     <Form>
@@ -23,7 +25,7 @@ const VenueDetailsForm = ({ isDisabled, venue }: Props) => {
         <FormControl w="300px" mx={2}>
           <FormLabel>{t('locations.one')}</FormLabel>
           <Flex>
-            <LocationPickerCreator
+            {user?.userRole === 'root' ? <><LocationPickerCreator
               locationName="location"
               createLocationName="__createLocation"
               editing={!isDisabled}
@@ -31,7 +33,7 @@ const VenueDetailsForm = ({ isDisabled, venue }: Props) => {
               hideLabel
               isModal
             />
-            {isDisabled ? <LocationDisplayButton locationId={venue.location} /> : null}
+            {isDisabled ? <LocationDisplayButton locationId={venue.location} /> : null}</> : <LocationDisplayButton locationId={venue.location} venueId={venue.id} />}
           </Flex>
         </FormControl>
         <FormControl ml={4} w="200px">

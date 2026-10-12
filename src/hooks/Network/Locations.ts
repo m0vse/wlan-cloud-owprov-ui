@@ -220,6 +220,17 @@ export const useGetLocation = ({ enabled, id }: { enabled: boolean; id: string }
   });
 };
 
+// A venue-scoped address read authorizes the exact stored venue/location
+// reference. It must not fetch a global location picker or parent entity.
+export const useGetVenueLocation = ({ id, venueId }: { id: string; venueId?: string }) => {
+  const { user } = useAuth();
+  return useQuery(['get-venue-location', user?.id, user?.securityPolicy, venueId, id],
+    ({ signal }) => axiosProv.get(`location/${encodeURIComponent(id)}?venueId=${encodeURIComponent(venueId ?? '')}`, { signal })
+      .then(({ data }) => data as Location),
+    { enabled: user?.userRole !== 'root' && !!user && !!id && !!venueId, retry: false,
+      keepPreviousData: false, staleTime: 0, cacheTime: 0 });
+};
+
 export const useCreateLocation = () =>
   useMutation((newLocation: CreateLocation) =>
     axiosProv.post('location/0', newLocation).then(({ data }) => data as Location),

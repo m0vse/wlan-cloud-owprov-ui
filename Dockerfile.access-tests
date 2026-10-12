@@ -11,5 +11,6 @@ RUN node test-user-access.cjs && NODE_PATH=/tmp/ui-test-dependencies/node_module
     NODE_PATH=/tmp/ui-test-dependencies/node_modules node test-scoped-bootstrap-interactions.cjs && \
     NODE_PATH=/tmp/ui-test-dependencies/node_modules node test-scoped-configuration-interactions.cjs && \
     NODE_PATH=/tmp/ui-test-dependencies/node_modules node test-scoped-site-inventory-interactions.cjs && \
+    NODE_PATH=/tmp/ui-test-dependencies/node_modules node test-scoped-venue-dependencies.cjs && \
     node test-auth-protocol.cjs && node test-mlo-configuration.cjs && node test-radio-eht.cjs && node test-radio-enable.cjs && \
     npm run build -- --outDir /tmp/owprov-access-build --emptyOutDir

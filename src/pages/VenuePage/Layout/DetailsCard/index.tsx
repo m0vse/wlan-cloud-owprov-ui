@@ -15,6 +15,7 @@ import useFormModal from 'hooks/useFormModal';
 import useFormRef from 'hooks/useFormRef';
 import { AxiosError } from 'models/Axios';
 import { VenueApiResponse } from 'models/Venue';
+import { useAuth } from 'contexts/AuthProvider';
 
 type Props = {
   id: string;
@@ -22,6 +23,7 @@ type Props = {
 
 const VenueDetailsCard = ({ id }: Props) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const toast = useToast();
   const [formKey, setFormKey] = React.useState(uuid());
   const { form, formRef } = useFormRef<VenueApiResponse & { __createLocation?: unknown }>();
@@ -58,7 +60,7 @@ const VenueDetailsCard = ({ id }: Props) => {
           <ToggleEditButton
             isEditing={isEditing}
             toggleEdit={setEditing.toggle}
-            isDisabled={getVenue.isFetching}
+            isDisabled={getVenue.isFetching || user?.userRole !== 'root'}
             isDirty={form.dirty}
           />
         </HStack>

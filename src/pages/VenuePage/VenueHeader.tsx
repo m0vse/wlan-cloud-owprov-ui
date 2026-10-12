@@ -13,6 +13,7 @@ import EntityBreadcrumb from 'components/EntityBreadcrumb';
 import { useGetVenue } from 'hooks/Network/Venues';
 import EntityFavoritesButton from 'layout/Sidebar/EntityNavigationButton/Tree/EntityFavoritesButton';
 import { axiosAnalytics, axiosSec } from 'utils/axiosInstances';
+import { useAuth } from 'contexts/AuthProvider';
 
 type Props = {
   id: string;
@@ -21,6 +22,8 @@ type Props = {
 
 const VenuePageHeader = ({ id, boardId }: Props) => {
   const getVenue = useGetVenue({ id });
+  const { user } = useAuth();
+  const isRoot = user?.userRole === 'root';
   const isAnalyticsAvailable = axiosSec.defaults.baseURL !== axiosAnalytics.defaults.baseURL;
 
   return (
@@ -42,11 +45,11 @@ const VenuePageHeader = ({ id, boardId }: Props) => {
         </HStack>
         <Spacer />
         <HStack spacing={2}>
-          <CreateVenueButton id={id} type="venue" />
+          {isRoot && <><CreateVenueButton id={id} type="venue" />
           <DeleteVenuePopover venue={getVenue.data} isDisabled={getVenue.isFetching || !getVenue.data} />
           {boardId && isAnalyticsAvailable ? <ViewAnalyticsSettingsModal boardId={boardId} venueId={id} /> : null}
           {!boardId && isAnalyticsAvailable ? <StartAnalyticsModal id={id} /> : null}
-          <VenueActions isDisabled={!getVenue.data} venueId={id} />
+          <VenueActions isDisabled={!getVenue.data} venueId={id} /></>}
           <RefreshButton onClick={getVenue.refetch} isFetching={getVenue.isFetching} isCompact />
         </HStack>
       </CardHeader>
