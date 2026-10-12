@@ -20,6 +20,7 @@ const SubscriberPage = React.lazy(() => import('pages/SubscriberPage'));
 const EndpointsPage = React.lazy(() => import('pages/EndpointsPage'));
 const MonitoringPage = React.lazy(() => import('pages/MonitoringPage'));
 const SystemConfigurationPage = React.lazy(() => import('pages/SystemConfigurationPage'));
+const EmailSettingsPage = React.lazy(() => import('pages/EmailSettingsPage'));
 const UsersPage = React.lazy(() => import('pages/UsersPage'));
 const VenuePage = React.lazy(() => import('pages/VenuePage'));
 
@@ -126,6 +127,15 @@ const routes: Route[] = [
         label: 'AP certificates',
         navName: () => 'AP certificates',
         component: CertificatesPage,
+      },
+      {
+        id: 'system-email',
+        authorized: ['root'],
+        path: '/emailSettings',
+        name: 'RAW-Email / SMTP settings',
+        label: 'Email / SMTP settings',
+        navName: () => 'Email / SMTP settings',
+        component: EmailSettingsPage,
       },
       {
         id: 'system-configuration',

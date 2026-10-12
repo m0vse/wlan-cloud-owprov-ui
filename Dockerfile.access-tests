@@ -6,6 +6,8 @@ RUN npm ci --no-audit --no-fund
 RUN npm install --prefix /tmp/ui-test-dependencies --no-audit --no-fund --package-lock=false jsdom@22.1.0
 COPY . /app/
 RUN node test-user-access.cjs && NODE_PATH=/tmp/ui-test-dependencies/node_modules node test-user-access-interactions.cjs && \
+    NODE_PATH=/tmp/ui-test-dependencies/node_modules node test-email-settings-interactions.cjs && \
+    NODE_PATH=/tmp/ui-test-dependencies/node_modules node test-login-error-interactions.cjs && \
     NODE_PATH=/tmp/ui-test-dependencies/node_modules node test-scoped-bootstrap-interactions.cjs && \
     NODE_PATH=/tmp/ui-test-dependencies/node_modules node test-scoped-configuration-interactions.cjs && \
     NODE_PATH=/tmp/ui-test-dependencies/node_modules node test-scoped-site-inventory-interactions.cjs && \

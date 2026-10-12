@@ -48,7 +48,7 @@ const _LoginForm: React.FC<_LoginFormProps> = ({ setActiveForm }) => {
   const displayError = useMemo(() => {
     const loginError: AxiosError = error as AxiosError;
 
-    if (loginError?.response?.data?.ErrorCode === 5) return t('login.waiting_for_email_verification');
+    if (loginError?.response?.data?.ErrorCode === 4) return t('login.waiting_for_email_verification');
     if (loginError?.response?.data?.ErrorCode === 15) {
       return t('login.suspended_error');
     }
