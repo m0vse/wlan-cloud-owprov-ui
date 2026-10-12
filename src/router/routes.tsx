@@ -123,9 +123,9 @@ const routes: Route[] = [
         id: 'system-certificates',
         authorized: ['root'],
         path: '/certificates',
-        name: 'RAW-AP certificates',
-        label: 'AP certificates',
-        navName: () => 'AP certificates',
+        name: 'RAW-Certificates',
+        label: 'Certificates',
+        navName: () => 'Certificates',
         component: CertificatesPage,
       },
       {
