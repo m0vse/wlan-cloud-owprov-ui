@@ -6,7 +6,7 @@ const Module = require('node:module');
 const ts = require('typescript');
 const { JSDOM } = require('jsdom');
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost' });
-for (const key of ['window', 'document', 'navigator', 'HTMLElement', 'SVGElement', 'Element', 'HTMLInputElement', 'HTMLSelectElement', 'Node', 'Event', 'MutationObserver']) global[key] = dom.window[key];
+for (const key of ['window', 'document', 'navigator', 'HTMLElement', 'SVGElement', 'Element', 'HTMLInputElement', 'HTMLSelectElement', 'HTMLButtonElement', 'Node', 'Event', 'MutationObserver']) global[key] = dom.window[key];
 global.getComputedStyle = dom.window.getComputedStyle;
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0); global.cancelAnimationFrame = clearTimeout;
 global.IS_REACT_ACT_ENVIRONMENT = true;
