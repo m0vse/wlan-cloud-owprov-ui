@@ -79,8 +79,10 @@ one-minute recovery delay and no repeats. No AP settings or firmware are changed
 
 **Group emails by** combines notifications for a venue or entity and the same
 explicitly configured recipient. The grouping window is in seconds, defaults to
-60, and is added after each rule's delay; `0` disables batching. For example, a
-five-minute offline delay and 60-second grouping window normally send after
+60, and is added after each rule's delay; `0` sends without an extra grouping wait.
+Updates observed in the same poll can still share one email. Large groups are
+split into bounded batches of up to 12 fault or recovery updates per email.
+For example, a five-minute offline delay and 60-second grouping window normally send after
 about six minutes, plus the collector's polling interval and provider latency.
 SMS notifications remain individual. Unrelated recipients do not receive the
 other sites' grouped notifications.

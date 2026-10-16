@@ -64,7 +64,7 @@ const VenueAlertsForm = ({ id, kind }: { id: string; kind: AlertScopeKind }) => 
       <SimpleGrid columns={[1, 2]} spacing={4} mt={4}>
         <FormControl><FormLabel htmlFor="alert-group-by">Group emails by</FormLabel><Select id="alert-group-by" value={draft.groupBy} isDisabled={disabled}
           onChange={(event) => change({ groupBy: event.target.value as AlertSettings['groupBy'] })}><option value="venue">Venue</option><option value="entity">Entity</option></Select></FormControl>
-        <FormControl><FormLabel htmlFor="alert-group-window">Grouping window (seconds, 0 off)</FormLabel><Input id="alert-group-window" type="number" min={0} max={3600} step={1}
+        <FormControl><FormLabel htmlFor="alert-group-window">Grouping wait (seconds)</FormLabel><Input id="alert-group-window" type="number" min={0} max={3600} step={1}
           value={Number.isNaN(draft.groupWindowSeconds) ? '' : draft.groupWindowSeconds} isDisabled={disabled}
           onChange={(event) => change({ groupWindowSeconds: event.target.value === '' ? Number.NaN : Number(event.target.value) })} /></FormControl>
       </SimpleGrid>
