@@ -50,3 +50,56 @@ It replaces any previous portal account with tab-scoped credentials and then
 disconnects the opener. Credentials are never added to the URL or persistent
 storage; existing server-side profile and permission checks still apply. A direct
 visit uses the normal portal login. Both UIs must be updated together.
+
+## Email and SMS alerts
+
+1. An administrator configures **System → Email** for SMTP and, optionally,
+   **System → SMS** for Twilio. Settings start blank and delivery is disabled.
+   Save before using **Send test email** or **Send test SMS**. Test messages are
+   sent only when clicked. Twilio requires an account SID, auth token and sender
+   number; phone numbers include `+` and the country code. Stored credentials are
+   never displayed. Ordinary saves retain them unless replacement or clearing is
+   explicitly selected.
+2. Open an entity or venue's **Alerts** card and select **Edit**. Enable alerts,
+   enter up to 20 email and/or SMS recipients per channel, then select delivery
+   channels and timing for **AP offline**, **Critical fault** and **Radio fault**.
+   Separate recipients with commas or new lines. **Save** applies the policy;
+   cancelling edits discards changes after confirmation.
+3. Configure a parent entity for shared site defaults. A venue inherits the
+   nearest configured parent venue or entity policy until its own policy is
+   saved. A disabled local policy also overrides its parent. **Use inherited
+   rules** removes the local override; it is available when editing an unchanged
+   local policy. The card identifies inherited settings.
+
+Each rule has an initial fault delay, recovery delay, optional repeat interval
+(`0` disables repeats), and optional recovery messages. Times in the rule table
+are minutes. A recovery is sent only after that recipient's fault notification
+was accepted. New policies default to disabled, with a five-minute fault delay,
+one-minute recovery delay and no repeats. No AP settings or firmware are changed.
+
+**Group emails by** combines notifications for a venue or entity and the same
+explicitly configured recipient. The grouping window is in seconds, defaults to
+60, and is added after each rule's delay; `0` disables batching. For example, a
+five-minute offline delay and 60-second grouping window normally send after
+about six minutes, plus the collector's polling interval and provider latency.
+SMS notifications remain individual. Unrelated recipients do not receive the
+other sites' grouped notifications.
+
+Quiet hours use the selected IANA time zone and weekdays, including overnight
+periods. **Mute until** uses the operator browser's local time. Both suppress
+delivery without disabling fault observation. Faults that clear before delivery
+do not produce a delayed obsolete outage message. Missing, stale or unavailable
+telemetry is not treated as proof of a healthy AP or a failed AP.
+
+**Delivery history** lists recent queued, accepted, retried, cancelled or failed
+attempts visible within the current access scope. **Provider accepted** means
+SMTP or Twilio accepted the request, not that an inbox or handset received it.
+An ambiguous send result, or a restart during an in-flight send, is held rather
+than automatically resent, preventing duplicate notification storms. Check
+provider logs before taking any manual resend action. If the card reports alerts
+unavailable, delivery is paused; an administrator should investigate service
+logs and the alert-state storage rather than resetting APs.
+
+Viewing policies requires device-read access; editing requires resource-write
+access to that entity or venue. Central SMTP/Twilio settings require root access.
+The backend enforces these permissions independently of the buttons.

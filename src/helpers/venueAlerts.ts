@@ -2,15 +2,16 @@ import { AlertSettings } from 'hooks/Network/VenueAlerts';
 
 export const alertTypes = [['down', 'AP offline'], ['critical', 'Critical fault'], ['radio', 'Radio fault']] as const;
 export const splitRecipients = (text: string) => [...new Set(text.split(/[,\n]/).map((value) => value.trim()).filter(Boolean))];
-export const validPhone = (value: string) => /^\+[1-9]\d{7,14}$/.test(value);
+export const validPhone = (value: string) => /^\+[1-9]\d{6,14}$/.test(value);
 export const validTimezone = (value: string) => {
   try { new Intl.DateTimeFormat('en', { timeZone: value }); return !!value; } catch { return false; }
 };
 export const validateAlertSettings = (settings: AlertSettings): string => {
   if (!['venue', 'entity'].includes(settings.groupBy) || !Number.isInteger(settings.groupWindowSeconds) ||
     settings.groupWindowSeconds < 0 || settings.groupWindowSeconds > 3600) return 'Use a grouping window from 0 to 3600 seconds.';
-  if (settings.emails.length > 50 || settings.phones.length > 50) return 'Use at most 50 recipients per channel.';
-  if (settings.emails.some((value) => !/^[^\s@,<>]+@[^\s@,<>]+\.[^\s@,<>]+$/.test(value))) return 'Enter valid email addresses.';
+  if (settings.emails.length > 20 || settings.phones.length > 20) return 'Use at most 20 recipients per channel.';
+  if (settings.emails.some((value) => value.length > 254 || !/^[\x21-\x7e]+$/.test(value) ||
+    !/^[^\s@<>:,;]+@[^\s@<>:,;]+\.[^\s@<>:,;]+$/.test(value))) return 'Enter valid email addresses.';
   if (settings.phones.some((value) => !validPhone(value))) return 'Use international phone numbers, for example +441234567890.';
   for (const rule of settings.rules) {
     if ([rule.delaySeconds, rule.recoveryDelaySeconds, rule.repeatSeconds].some((value) =>
@@ -21,7 +22,7 @@ export const validateAlertSettings = (settings: AlertSettings): string => {
   }
   if (!validTimezone(settings.quietHours.timezone)) return 'Enter a valid time zone, for example Europe/London.';
   if (![settings.quietHours.start, settings.quietHours.end].every((value) => /^([01]\d|2[0-3]):[0-5]\d$/.test(value))) return 'Enter valid quiet hours.';
-  if (settings.quietHours.enabled && (!settings.quietHours.days.length || settings.quietHours.start === settings.quietHours.end)) return 'Choose quiet days and different start and end times.';
+  if (!settings.quietHours.days.length || (settings.quietHours.enabled && settings.quietHours.start === settings.quietHours.end)) return 'Choose quiet days and different start and end times.';
   if (!Number.isFinite(settings.muteUntil) || settings.muteUntil < 0) return 'Enter a valid mute end time.';
   return '';
 };

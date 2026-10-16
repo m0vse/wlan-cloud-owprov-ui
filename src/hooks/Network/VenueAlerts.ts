@@ -9,10 +9,10 @@ export type AlertSettings = { enabled: boolean; emails: string[]; phones: string
   groupBy: 'venue' | 'entity'; groupWindowSeconds: number;
   quietHours: { enabled: boolean; timezone: string; start: string; end: string; days: number[] }; muteUntil: number };
 export type AlertEvent = { id: string; type: string; device?: string; name?: string; status: string;
-  channel: string; recipient: string; time: number };
+  channel: string; recipient: string; time: number; recovery?: boolean };
 export type AlertScopeKind = 'venue' | 'entity';
 export type VenueAlertsResponse = { settings: AlertSettings; events: AlertEvent[]; available: boolean;
-  configured: boolean; inherited: boolean; sourceScope?: { kind: AlertScopeKind; id: string; name: string } };
+  configured: boolean; inherited: boolean; sourceScope?: { kind: AlertScopeKind; id?: string; name: string } };
 export const useVenueAlerts = (id: string, kind: AlertScopeKind = 'venue') => {
   const { user } = useAuth();
   return useQuery(['venue-alerts', user?.id, user?.securityPolicy, kind, id], async ({ signal }) => {

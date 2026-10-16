@@ -29,7 +29,7 @@ Module._load = function (name, parent, isMain) {
   if (name === 'utils/axiosInstances') return {
     axiosProv: {
       get: async (url) => { gets.push(url); if (failGet) throw { response: { status: 403 } }; const id = url.split('/')[1].split('?')[0];
-        return { data: { settings: clone(venues[id]), available: true, configured: !!configured[id], inherited: !configured[id], sourceScope: { kind: 'entity', id: 'parent', name: 'Parent site' }, events: id === 'venue-a' ? [{ id: 'evt1', type: 'down', device: 'ap-a', name: 'Front AP', status: 'accepted', channel: 'email', recipient: 'operator@example.invalid', time: 1700000000 }] : [] } }; },
+        return { data: { settings: clone(venues[id]), available: true, configured: !!configured[id], inherited: !configured[id], sourceScope: { kind: 'entity', id: 'parent', name: 'Parent site' }, events: id === 'venue-a' ? [{ id: 'evt1', type: 'down', device: 'ap-a', name: 'Front AP', status: 'accepted', channel: 'email', recipient: 'operator@example.invalid', time: 1700000000, recovery: true }] : [] } }; },
       put: async (url, payload) => { puts.push({ url, payload: clone(payload) }); if (failPut) throw new Error('private-server-detail'); const id = url.split('/')[1].split('?')[0];
         configured[id] = !payload.inherit; venues[id] = payload.inherit ? { ...defaults(), emails: ['inherited@example.invalid'] } : clone(payload);
         return { data: { settings: clone(venues[id]), available: true, configured: !!configured[id], inherited: !configured[id], events: [] } }; },
@@ -70,9 +70,13 @@ const discard = async () => { await edit(); const dialog = document.querySelecto
 (async () => {
   check(JSON.stringify(splitRecipients('a@example.invalid, a@example.invalid\nb@example.invalid')) === JSON.stringify(['a@example.invalid', 'b@example.invalid']), 'recipient list deduplicates');
   check(!validateAlertSettings(defaults()), 'defaults validate without enabling delivery');
+  check(validateAlertSettings({ ...defaults(), emails: ['name:part@example.invalid'] }).includes('valid email'), 'email validation agrees with native parser');
+  check(validateAlertSettings({ ...defaults(), quietHours: { ...defaults().quietHours, days: [] } }).includes('quiet days'), 'empty quiet days rejected consistently');
   await render();
   check(find('alert-emails').disabled && find('save').hidden, 'venue uses read-only heading and shared edit controls');
   check(container.textContent.includes('Provider accepted') && container.textContent.includes('Front AP'), 'delivery history does not claim handset delivery');
+  check(container.textContent.includes('AP offline cleared'), 'delivery history distinguishes recovery from fault');
+  check(validateAlertSettings({ ...defaults(), emails: Array.from({length:21}, (_, i) => `user${i}@example.invalid`) }).includes('20 recipients'), 'recipient cap agrees with backend');
   check(container.textContent.includes('Inherited from Parent site'), 'inherited policy identified concisely');
   await edit(); await toggle('Enable alerts', true); await save();
   check(puts.length === 0 && container.textContent.includes('Add an email recipient'), 'enabled rules require channel recipients');

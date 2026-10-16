@@ -98,8 +98,8 @@ const VenueAlertsForm = ({ id, kind }: { id: string; kind: AlertScopeKind }) => 
       <Heading size="sm" mt={6} mb={3}>Delivery history</Heading>
       {!query.data?.events.length ? <Text>No deliveries yet.</Text> : <Box overflowX="auto"><Table size="sm"><Thead><Tr>
         {['Time', 'Device', 'Alert', 'Channel', 'Recipient', 'Status'].map((label) => <Th key={label}>{label}</Th>)}
-      </Tr></Thead><Tbody>{query.data.events.map((event) => <Tr key={event.id}><Td>{new Date(event.time * 1000).toLocaleString()}</Td><Td>{event.name || event.device || '—'}</Td>
-        <Td>{alertTypes.find(([type]) => type === event.type)?.[1] ?? event.type}</Td><Td>{event.channel}</Td><Td>{event.recipient}</Td>
+      </Tr></Thead><Tbody>{query.data.events.map((event, index) => <Tr key={`${event.id}:${event.time}:${event.status}:${index}`}><Td>{new Date(event.time * 1000).toLocaleString()}</Td><Td>{event.name || event.device || '—'}</Td>
+        <Td>{alertTypes.find(([type]) => type === event.type)?.[1] ?? event.type}{event.recovery ? ' cleared' : ''}</Td><Td>{event.channel}</Td><Td>{event.recipient}</Td>
         <Td>{event.status === 'accepted' ? 'Provider accepted' : event.status}</Td></Tr>)}</Tbody></Table></Box>}
     </Box></CardBody>
   </Card>;
