@@ -9,6 +9,7 @@ import VenueInventoryCard from './InventoryCard';
 import VenueMonitoringTab from './Monitoring';
 import VenueResourcesCard from './Resources';
 import VenueNotes from './VenueNotes';
+import VenueAlerts from './Alerts';
 import { useAuth } from 'contexts/AuthProvider';
 
 const SETTING = 'provisioning.venue.tabIndex';
@@ -99,6 +100,7 @@ const VenuePageLayout = ({ id, hasAnalytics }: Props) => {
             {isRoot && <VenueResourcesCard id={id} />}
             <VenueContactsCard id={id} />
             <VenueNotes id={id} />
+            <VenueAlerts id={id} />
           </Masonry>
         </TabPanel>
         <TabPanel px={0}>{hasAnalytics ? <VenueMonitoringTab venueId={id} /> : null}</TabPanel>

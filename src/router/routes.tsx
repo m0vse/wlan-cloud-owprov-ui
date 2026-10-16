@@ -21,6 +21,7 @@ const EndpointsPage = React.lazy(() => import('pages/EndpointsPage'));
 const MonitoringPage = React.lazy(() => import('pages/MonitoringPage'));
 const SystemConfigurationPage = React.lazy(() => import('pages/SystemConfigurationPage'));
 const EmailSettingsPage = React.lazy(() => import('pages/EmailSettingsPage'));
+const SmsSettingsPage = React.lazy(() => import('pages/SmsSettingsPage'));
 const UsersPage = React.lazy(() => import('pages/UsersPage'));
 const VenuePage = React.lazy(() => import('pages/VenuePage'));
 
@@ -136,6 +137,15 @@ const routes: Route[] = [
         label: 'Email',
         navName: () => 'Email',
         component: EmailSettingsPage,
+      },
+      {
+        id: 'system-sms',
+        authorized: ['root'],
+        path: '/smsSettings',
+        name: 'RAW-SMS',
+        label: 'SMS',
+        navName: () => 'SMS',
+        component: SmsSettingsPage,
       },
       {
         id: 'system-configuration',

@@ -6,6 +6,7 @@ import EntityDetails from './EntityDetails';
 import EntityLocationContactsCard from './EntityLocationContactsCard';
 import EntityNotes from './EntityNotes';
 import EntityInventoryCard from './InventoryCard';
+import AlertsCard from 'pages/VenuePage/Layout/Alerts';
 
 type Props = {
   id: string;
@@ -27,6 +28,7 @@ const EntityPageLayout = ({ id }: Props) => (
     <ConfigurationCard id={id} />
     <EntityLocationContactsCard id={id} />
     <EntityNotes id={id} />
+    <AlertsCard id={id} kind="entity" />
   </Masonry>
 );
 
