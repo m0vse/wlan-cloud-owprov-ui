@@ -11,7 +11,7 @@ export const validateAlertSettings = (settings: AlertSettings): string => {
     settings.groupWindowSeconds < 0 || settings.groupWindowSeconds > 3600) return 'Use a grouping window from 0 to 3600 seconds.';
   if (settings.emails.length > 20 || settings.phones.length > 20) return 'Use at most 20 recipients per channel.';
   if (settings.emails.some((value) => value.length > 254 || !/^[\x21-\x7e]+$/.test(value) ||
-    !/^[^\s@<>:,;]+@[^\s@<>:,;]+\.[^\s@<>:,;]+$/.test(value))) return 'Enter valid email addresses.';
+    !/^[A-Za-z0-9.!#$%&'*+\/=?^_\x60{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$/.test(value))) return 'Enter valid email addresses.';
   if (settings.phones.some((value) => !validPhone(value))) return 'Use international phone numbers, for example +441234567890.';
   for (const rule of settings.rules) {
     if ([rule.delaySeconds, rule.recoveryDelaySeconds, rule.repeatSeconds].some((value) =>

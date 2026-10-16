@@ -71,6 +71,7 @@ const discard = async () => { await edit(); const dialog = document.querySelecto
   check(JSON.stringify(splitRecipients('a@example.invalid, a@example.invalid\nb@example.invalid')) === JSON.stringify(['a@example.invalid', 'b@example.invalid']), 'recipient list deduplicates');
   check(!validateAlertSettings(defaults()), 'defaults validate without enabling delivery');
   check(validateAlertSettings({ ...defaults(), emails: ['name:part@example.invalid'] }).includes('valid email'), 'email validation agrees with native parser');
+  check(!validateAlertSettings({ ...defaults(), emails: ['operator@localhost'] }), 'local-domain email uses the same supported SEC validation');
   check(validateAlertSettings({ ...defaults(), quietHours: { ...defaults().quietHours, days: [] } }).includes('quiet days'), 'empty quiet days rejected consistently');
   await render();
   check(find('alert-emails').disabled && find('save').hidden, 'venue uses read-only heading and shared edit controls');

@@ -19,6 +19,7 @@ import useApiRequirements from 'hooks/useApiRequirements';
 import useFormModal from 'hooks/useFormModal';
 import useFormRef from 'hooks/useFormRef';
 import { useNotification } from 'hooks/useNotification';
+import { contactMobilePatch, validContactMobile } from 'helpers/userContactMobile';
 
 const FormSchema = (t: (str: string) => string, { passRegex }: { passRegex: string }) =>
   Yup.object().shape({
@@ -32,6 +33,7 @@ const FormSchema = (t: (str: string) => string, { passRegex }: { passRegex: stri
       // @ts-ignore
       .test('password-match', 'Passwords must match', (value, { from }) => value === from[0].value.newPassword),
     description: Yup.string(),
+    contactMobileNumber: Yup.string().test('mobile', 'Use a country code, for example +441234567890.', validContactMobile),
   });
 
 const GeneralInformationProfile = () => {
@@ -89,6 +91,7 @@ const GeneralInformationProfile = () => {
           <Formik<{
             description: string;
             name: string;
+            contactMobileNumber: string;
             newPassword?: string;
           }>
             key={formKey}
@@ -97,9 +100,11 @@ const GeneralInformationProfile = () => {
                 email: user?.email,
                 description: user?.description ?? '',
                 name: user?.name ?? '',
+                contactMobileNumber: user?.contactMobileNumber ?? '',
               } as {
                 description: string;
                 name: string;
+                contactMobileNumber: string;
                 newPassword?: string;
               }
             }
@@ -108,17 +113,20 @@ const GeneralInformationProfile = () => {
                 FormikProps<{
                   description: string;
                   name: string;
+                  contactMobileNumber: string;
                   newPassword?: string;
                 }>
               >
             }
             validationSchema={FormSchema(t, { passRegex: passwordPattern })}
-            onSubmit={async ({ description, name, newPassword }, { setSubmitting }) => {
+            onSubmit={async ({ description, name, contactMobileNumber, newPassword }, { setSubmitting }) => {
+              if (!isEditing) { setSubmitting(false); return; }
               await updateUser.mutateAsync(
                 {
                   id: user?.id,
                   description,
                   name,
+                  ...contactMobilePatch(contactMobileNumber, user?.contactMobileNumber),
                   currentPassword: newPassword,
                 },
                 {
@@ -154,6 +162,7 @@ const GeneralInformationProfile = () => {
                     isRequired
                   />
                 </Flex>
+                <Box mt={4}><StringField name="contactMobileNumber" label="Mobile number" isDisabled={isSubmitting || !isEditing} /></Box>
                 <Flex my={4}>
                   <StringField
                     name="newPassword"

@@ -25,6 +25,7 @@ export type User = {
   currentLoginURI: string;
   currentPassword: string;
   description: string;
+  contactMobileNumber?: string;
   email: string;
   id: string;
   lastEmailCheck: number;
@@ -264,6 +265,7 @@ export const useDeleteUser = () => {
 
 const createUser = async (newUser: {
   name: string;
+  contactMobileNumber?: string;
   description?: string;
   email: string;
   currentPassword: string;

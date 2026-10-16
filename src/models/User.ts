@@ -18,6 +18,7 @@ export type User = {
   currentLoginURI: string;
   currentPassword: string;
   description: string;
+  contactMobileNumber?: string;
   email: string;
   id: string;
   lastEmailCheck: number;

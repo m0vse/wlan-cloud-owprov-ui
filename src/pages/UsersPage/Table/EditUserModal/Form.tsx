@@ -15,6 +15,7 @@ import { User, useUpdateUser } from 'hooks/Network/Users';
 import useApiRequirements from 'hooks/useApiRequirements';
 import AccessEditor from './AccessEditor';
 import { canEditAccess, parseAccessPolicy } from 'helpers/userAccessPolicy';
+import { contactMobilePatch, validContactMobile } from 'helpers/userContactMobile';
 
 type Props = {
   editing: boolean;
@@ -40,7 +41,7 @@ const UpdateUserForm = ({ editing, isOpen, onClose, selectedUser, formRef }: Pro
         .test('test-password', t('form.invalid_password'), (v) => testRegex(v, passwordPattern)),
       description: Yup.string(),
       mfa: Yup.string(),
-      phoneNumber: Yup.string(),
+      contactMobileNumber: Yup.string().test('mobile', 'Use a country code, for example +441234567890.', validContactMobile),
       securityPolicy: Yup.string().test('access-policy', 'Select a site and at least one permission.',
         (value) => (value ?? '') === (selectedUser.securityPolicy ?? '') || (canEditAccess(user, selectedUser) &&
           Number.isSafeInteger(selectedUser.securityPolicyChange) && selectedUser.securityPolicyChange >= 0 &&
@@ -67,9 +68,9 @@ const UpdateUserForm = ({ editing, isOpen, onClose, selectedUser, formRef }: Pro
       innerRef={formRef}
       enableReinitialize
       key={formKey}
-      initialValues={selectedUser}
+      initialValues={{ ...selectedUser, contactMobileNumber: selectedUser.contactMobileNumber ?? '' }}
       validationSchema={UpdateUserSchema}
-      onSubmit={({ name, description, currentPassword, userRole, notes, securityPolicy }, { setSubmitting, resetForm }) => {
+      onSubmit={({ name, description, contactMobileNumber, currentPassword, userRole, notes, securityPolicy }, { setSubmitting, resetForm }) => {
         if (formIsDisabled()) {
           setSubmitting(false);
           return;
@@ -81,6 +82,7 @@ const UpdateUserForm = ({ editing, isOpen, onClose, selectedUser, formRef }: Pro
             currentPassword: currentPassword?.length > 0 ? currentPassword : undefined,
             userRole,
             description,
+            ...contactMobilePatch(contactMobileNumber, selectedUser.contactMobileNumber),
             notes: notes.filter((note) => note.isNew),
             ...(securityPolicy !== selectedUser.securityPolicy && canEditAccess(user, selectedUser)
               ? { securityPolicy, expectedPolicyRevision: selectedUser.securityPolicyChange } : {}),
@@ -147,6 +149,7 @@ const UpdateUserForm = ({ editing, isOpen, onClose, selectedUser, formRef }: Pro
                     isDisabled={!canEditRole() || formIsDisabled()}
                   />
                   <StringField name="name" label={t('common.name')} isDisabled={formIsDisabled()} isRequired />
+                  <StringField name="contactMobileNumber" label="Mobile number" isDisabled={formIsDisabled()} />
                   <StringField
                     name="currentPassword"
                     label={t('user.password')}

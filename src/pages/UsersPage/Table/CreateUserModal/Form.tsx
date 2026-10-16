@@ -13,9 +13,11 @@ import { testRegex } from 'constants/formTests';
 import { useAuth } from 'contexts/AuthProvider';
 import { useCreateUser } from 'hooks/Network/Users';
 import useApiRequirements from 'hooks/useApiRequirements';
+import { contactMobilePatch, validContactMobile } from 'helpers/userContactMobile';
 
 export type CreateUserFormValues = {
   name: string;
+  contactMobileNumber: string;
   description: string;
   email: string;
   currentPassword: string;
@@ -43,6 +45,7 @@ const CreateUserForm = ({ isOpen, onClose, formRef }: Props) => {
     email: Yup.string().email(t('form.invalid_email')).required('Required'),
     name: Yup.string().required('Required'),
     description: Yup.string(),
+    contactMobileNumber: Yup.string().test('mobile', 'Use a country code, for example +441234567890.', validContactMobile),
     currentPassword: Yup.string()
       .required(t('form.required'))
       .test('test-password', t('form.invalid_password'), (v) => testRegex(v, passwordPattern))
@@ -54,6 +57,7 @@ const CreateUserForm = ({ isOpen, onClose, formRef }: Props) => {
     email: Yup.string().email(t('form.invalid_email')).required('Required'),
     name: Yup.string().required('Required'),
     description: Yup.string(),
+    contactMobileNumber: Yup.string().test('mobile', 'Use a country code, for example +441234567890.', validContactMobile),
     currentPassword: Yup.string()
       .required(t('form.required'))
       .test('test-password', t('form.invalid_password'), (v) => testRegex(v, passwordPattern))
@@ -64,6 +68,7 @@ const CreateUserForm = ({ isOpen, onClose, formRef }: Props) => {
 
   const createParameters = ({
     name,
+    contactMobileNumber,
     description,
     email,
     currentPassword,
@@ -76,6 +81,7 @@ const CreateUserForm = ({ isOpen, onClose, formRef }: Props) => {
       return {
         name,
         email,
+        ...contactMobilePatch(contactMobileNumber),
         currentPassword,
         userRole,
         description: description.length > 0 ? description : undefined,
@@ -87,6 +93,7 @@ const CreateUserForm = ({ isOpen, onClose, formRef }: Props) => {
     return {
       name,
       email,
+      ...contactMobilePatch(contactMobileNumber),
       currentPassword,
       userRole,
       description: description.length > 0 ? description : undefined,
@@ -113,6 +120,7 @@ const CreateUserForm = ({ isOpen, onClose, formRef }: Props) => {
       initialValues={
         {
           name: '',
+          contactMobileNumber: '',
           description: '',
           email: '',
           currentPassword: '',
@@ -161,6 +169,7 @@ const CreateUserForm = ({ isOpen, onClose, formRef }: Props) => {
         <SimpleGrid minChildWidth="300px" spacing="20px">
           <StringField name="email" label={t('common.email')} isRequired />
           <StringField name="name" label={t('common.name')} isRequired />
+          <StringField name="contactMobileNumber" label="Mobile number" />
           <SelectField
             name="userRole"
             label={t('user.role')}

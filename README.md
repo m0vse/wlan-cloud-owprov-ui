@@ -103,3 +103,9 @@ logs and the alert-state storage rather than resetting APs.
 Viewing policies requires device-read access; editing requires resource-write
 access to that entity or venue. Central SMTP/Twilio settings require root access.
 The backend enforces these permissions independently of the buttons.
+
+The user account and administrator user cards also accept an optional **Mobile
+number** contact in international format. This is separate from the verified
+phone used for SMS sign-in: editing the contact does not enable MFA, change its
+number, or mark the contact verified. Alert SMS recipients remain explicitly
+configured on the entity or venue's Alerts card.

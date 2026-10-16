@@ -132,6 +132,7 @@ export const useUpdateAccount = ({ user }: { user?: User }) => {
       id?: string;
       name?: string;
       description?: string;
+      contactMobileNumber?: string;
       currentPassword?: string;
       userTypeProprietaryInfo?: {
         authenticatorSecret?: string;
